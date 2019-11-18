@@ -15,6 +15,7 @@
 package org.hyperledger.besu.ethereum.mainnet.contractvalidation;
 
 import org.hyperledger.besu.ethereum.mainnet.ContractValidationRule;
+import org.hyperledger.besu.ethereum.vm.EVM;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 
 import org.apache.logging.log4j.LogManager;
@@ -31,7 +32,7 @@ public class MaxCodeSizeRule implements ContractValidationRule {
   }
 
   @Override
-  public boolean validate(final MessageFrame frame) {
+  public boolean validate(final MessageFrame frame, final EVM evm) {
     final int contractCodeSize = frame.getOutputData().size();
     if (contractCodeSize <= maxCodeSize) {
       return true;

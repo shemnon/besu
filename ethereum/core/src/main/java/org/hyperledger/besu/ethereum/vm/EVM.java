@@ -157,4 +157,8 @@ public class EVM {
 
     return operations.getOrDefault(bytecode.get(offset), contractAccountVersion, invalidOperation);
   }
+
+  public OperationRegistry getOperationRegistry() {
+    return operations;
+  }
 }

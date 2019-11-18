@@ -14,10 +14,11 @@
  */
 package org.hyperledger.besu.ethereum.mainnet;
 
+import org.hyperledger.besu.ethereum.vm.EVM;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 
 @FunctionalInterface
 public interface ContractValidationRule {
 
-  boolean validate(MessageFrame frame);
+  boolean validate(MessageFrame frame, EVM evm);
 }

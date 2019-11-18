@@ -150,7 +150,7 @@ public class MainnetContractCreationProcessor extends AbstractMessageProcessor {
         frame.setState(MessageFrame.State.COMPLETED_SUCCESS);
       }
     } else {
-      if (contractValidationRules.stream().allMatch(rule -> rule.validate(frame))) {
+      if (contractValidationRules.stream().allMatch(rule -> rule.validate(frame, evm))) {
         frame.decrementRemainingGas(depositFee);
 
         // Finalize contract creation, setting the contract code.
@@ -165,6 +165,7 @@ public class MainnetContractCreationProcessor extends AbstractMessageProcessor {
             frame.getRemainingGas());
         frame.setState(MessageFrame.State.COMPLETED_SUCCESS);
       } else {
+        LOG.trace("Contract creation error: contract validation failure");
         frame.setState(MessageFrame.State.EXCEPTIONAL_HALT);
       }
     }
