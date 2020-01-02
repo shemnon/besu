@@ -16,9 +16,9 @@ package org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.tracing.vm;
 
 public class Store {
 
-  private String key;
+  private final String key;
 
-  private String val;
+  private final String val;
 
   public Store(final String key, final String val) {
     this.key = key;
