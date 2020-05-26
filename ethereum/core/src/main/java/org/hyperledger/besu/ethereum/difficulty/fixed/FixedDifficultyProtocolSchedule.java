@@ -25,21 +25,25 @@ public class FixedDifficultyProtocolSchedule {
   public static ProtocolSchedule<Void> create(
       final GenesisConfigOptions config,
       final PrivacyParameters privacyParameters,
-      final boolean isRevertReasonEnabled) {
+      final boolean revertReasonEnabled,
+      final boolean evmStateTraceEnabled) {
     return new ProtocolScheduleBuilder<>(
             config,
             builder -> builder.difficultyCalculator(FixedDifficultyCalculators.calculator(config)),
             privacyParameters,
-            isRevertReasonEnabled)
+            revertReasonEnabled,
+            evmStateTraceEnabled)
         .createProtocolSchedule();
   }
 
   public static ProtocolSchedule<Void> create(
-      final GenesisConfigOptions config, final boolean isRevertReasonEnabled) {
-    return create(config, PrivacyParameters.DEFAULT, isRevertReasonEnabled);
+      final GenesisConfigOptions config,
+      final boolean revertReasonEnabled,
+      final boolean evmStateTraceEnabled) {
+    return create(config, PrivacyParameters.DEFAULT, revertReasonEnabled, evmStateTraceEnabled);
   }
 
   public static ProtocolSchedule<Void> create(final GenesisConfigOptions config) {
-    return create(config, PrivacyParameters.DEFAULT, false);
+    return create(config, PrivacyParameters.DEFAULT, false, false);
   }
 }

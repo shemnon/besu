@@ -28,42 +28,50 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.OptionalInt;
 
-public class ClassicProtocolSpecs {
+class ClassicProtocolSpecs {
   private static final Wei MAX_BLOCK_REWARD = Wei.fromEth(5);
 
-  public static ProtocolSpecBuilder<Void> classicRecoveryInitDefinition(
-      final OptionalInt contractSizeLimit, final OptionalInt configStackSizeLimit) {
-    return MainnetProtocolSpecs.homesteadDefinition(contractSizeLimit, configStackSizeLimit)
+  static ProtocolSpecBuilder<Void> classicRecoveryInitDefinition(
+      final OptionalInt contractSizeLimit,
+      final OptionalInt configStackSizeLimit,
+      final boolean enableEvmStateTrace) {
+    return MainnetProtocolSpecs.homesteadDefinition(
+            contractSizeLimit, configStackSizeLimit, enableEvmStateTrace)
         .blockHeaderValidatorBuilder(MainnetBlockHeaderValidator.createClassicValidator())
         .name("ClassicRecoveryInit");
   }
 
-  public static ProtocolSpecBuilder<Void> tangerineWhistleDefinition(
+  static ProtocolSpecBuilder<Void> tangerineWhistleDefinition(
       final Optional<BigInteger> chainId,
       final OptionalInt contractSizeLimit,
-      final OptionalInt configStackSizeLimit) {
-    return MainnetProtocolSpecs.homesteadDefinition(contractSizeLimit, configStackSizeLimit)
+      final OptionalInt configStackSizeLimit,
+      final boolean enableEvmStateTrace) {
+    return MainnetProtocolSpecs.homesteadDefinition(
+            contractSizeLimit, configStackSizeLimit, enableEvmStateTrace)
         .gasCalculator(TangerineWhistleGasCalculator::new)
         .transactionValidatorBuilder(
             gasCalculator -> new MainnetTransactionValidator(gasCalculator, true, chainId))
         .name("ClassicTangerineWhistle");
   }
 
-  public static ProtocolSpecBuilder<Void> dieHardDefinition(
+  static ProtocolSpecBuilder<Void> dieHardDefinition(
       final Optional<BigInteger> chainId,
       final OptionalInt configContractSizeLimit,
-      final OptionalInt configStackSizeLimit) {
-    return tangerineWhistleDefinition(chainId, OptionalInt.empty(), configStackSizeLimit)
+      final OptionalInt configStackSizeLimit,
+      final boolean enableEvmStateTrace) {
+    return tangerineWhistleDefinition(
+            chainId, OptionalInt.empty(), configStackSizeLimit, enableEvmStateTrace)
         .gasCalculator(DieHardGasCalculator::new)
         .difficultyCalculator(ClassicDifficultyCalculators.DIFFICULTY_BOMB_PAUSED)
         .name("DieHard");
   }
 
-  public static ProtocolSpecBuilder<Void> gothamDefinition(
+  static ProtocolSpecBuilder<Void> gothamDefinition(
       final Optional<BigInteger> chainId,
       final OptionalInt contractSizeLimit,
-      final OptionalInt configStackSizeLimit) {
-    return dieHardDefinition(chainId, contractSizeLimit, configStackSizeLimit)
+      final OptionalInt configStackSizeLimit,
+      final boolean enableEvmStateTrace) {
+    return dieHardDefinition(chainId, contractSizeLimit, configStackSizeLimit, enableEvmStateTrace)
         .blockReward(MAX_BLOCK_REWARD)
         .difficultyCalculator(ClassicDifficultyCalculators.DIFFICULTY_BOMB_DELAYED)
         .blockProcessorBuilder(
@@ -82,32 +90,33 @@ public class ClassicProtocolSpecs {
         .name("Gotham");
   }
 
-  public static ProtocolSpecBuilder<Void> defuseDifficultyBombDefinition(
+  static ProtocolSpecBuilder<Void> defuseDifficultyBombDefinition(
       final Optional<BigInteger> chainId,
       final OptionalInt contractSizeLimit,
-      final OptionalInt configStackSizeLimit) {
-    return gothamDefinition(chainId, contractSizeLimit, configStackSizeLimit)
+      final OptionalInt configStackSizeLimit,
+      final boolean enableEvmStateTrace) {
+    return gothamDefinition(chainId, contractSizeLimit, configStackSizeLimit, enableEvmStateTrace)
         .difficultyCalculator(ClassicDifficultyCalculators.DIFFICULTY_BOMB_REMOVED)
         .transactionValidatorBuilder(
             gasCalculator -> new MainnetTransactionValidator(gasCalculator, true, chainId))
         .name("DefuseDifficultyBomb");
   }
 
-  public static ProtocolSpecBuilder<Void> atlantisDefinition(
+  static ProtocolSpecBuilder<Void> atlantisDefinition(
       final Optional<BigInteger> chainId,
       final OptionalInt configContractSizeLimit,
       final OptionalInt configStackSizeLimit,
-      final boolean enableRevertReason) {
+      final boolean enableRevertReason,
+      final boolean enableEvmStateTrace) {
     final int contractSizeLimit =
         configContractSizeLimit.orElse(MainnetProtocolSpecs.SPURIOUS_DRAGON_CONTRACT_SIZE_LIMIT);
     final int stackSizeLimit = configStackSizeLimit.orElse(MessageFrame.DEFAULT_MAX_STACK_SIZE);
-    return gothamDefinition(chainId, configContractSizeLimit, configStackSizeLimit)
+    return gothamDefinition(
+            chainId, configContractSizeLimit, configStackSizeLimit, enableEvmStateTrace)
         .evmBuilder(MainnetEvmRegistries::byzantium)
         .gasCalculator(SpuriousDragonGasCalculator::new)
         .skipZeroBlockRewards(true)
-        .messageCallProcessorBuilder(
-            (evm, precompileContractRegistry) ->
-                new MainnetMessageCallProcessor(evm, precompileContractRegistry))
+        .messageCallProcessorBuilder(MainnetMessageCallProcessor::new)
         .precompileContractRegistryBuilder(MainnetPrecompiledContractRegistries::byzantium)
         .difficultyCalculator(ClassicDifficultyCalculators.EIP100)
         .transactionReceiptFactory(
@@ -140,31 +149,42 @@ public class ClassicProtocolSpecs {
         .name("Atlantis");
   }
 
-  public static ProtocolSpecBuilder<Void> aghartaDefinition(
+  static ProtocolSpecBuilder<Void> aghartaDefinition(
       final Optional<BigInteger> chainId,
       final OptionalInt configContractSizeLimit,
       final OptionalInt configStackSizeLimit,
-      final boolean enableRevertReason) {
+      final boolean enableRevertReason,
+      final boolean enableEvmStateTrace) {
     return atlantisDefinition(
-            chainId, configContractSizeLimit, configStackSizeLimit, enableRevertReason)
+            chainId,
+            configContractSizeLimit,
+            configStackSizeLimit,
+            enableRevertReason,
+            enableEvmStateTrace)
         .evmBuilder(MainnetEvmRegistries::constantinople)
         .gasCalculator(ConstantinopleFixGasCalculator::new)
-        .evmBuilder(gasCalculator -> MainnetEvmRegistries.constantinople(gasCalculator))
+        .evmBuilder(MainnetEvmRegistries::constantinople)
         .precompileContractRegistryBuilder(MainnetPrecompiledContractRegistries::istanbul)
         .name("Agharta");
   }
 
-  public static ProtocolSpecBuilder<Void> phoenixDefinition(
+  static ProtocolSpecBuilder<Void> phoenixDefinition(
       final Optional<BigInteger> chainId,
       final OptionalInt configContractSizeLimit,
       final OptionalInt configStackSizeLimit,
-      final boolean enableRevertReason) {
+      final boolean enableRevertReason,
+      final boolean enableEvmStateTrace) {
     return aghartaDefinition(
-            chainId, configContractSizeLimit, configStackSizeLimit, enableRevertReason)
+            chainId,
+            configContractSizeLimit,
+            configStackSizeLimit,
+            enableRevertReason,
+            enableEvmStateTrace)
         .gasCalculator(IstanbulGasCalculator::new)
         .evmBuilder(
-            gasCalculator ->
-                MainnetEvmRegistries.istanbul(gasCalculator, chainId.orElse(BigInteger.ZERO)))
+            (gasCalculator, evmStateTrace) ->
+                MainnetEvmRegistries.istanbul(
+                    gasCalculator, chainId.orElse(BigInteger.ZERO), evmStateTrace))
         .precompileContractRegistryBuilder(MainnetPrecompiledContractRegistries::istanbul)
         .name("Phoenix");
   }

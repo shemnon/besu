@@ -86,7 +86,8 @@ public abstract class BesuControllerBuilder<C> {
   protected Path dataDirectory;
   protected Clock clock;
   protected NodeKey nodeKey;
-  protected boolean isRevertReasonEnabled;
+  protected boolean revertReasonEnabled;
+  protected boolean evmStateTraceEnabled;
   GasLimitCalculator gasLimitCalculator;
   private StorageProvider storageProvider;
   private boolean isPruningEnabled;
@@ -157,8 +158,13 @@ public abstract class BesuControllerBuilder<C> {
     return this;
   }
 
-  public BesuControllerBuilder<C> isRevertReasonEnabled(final boolean isRevertReasonEnabled) {
-    this.isRevertReasonEnabled = isRevertReasonEnabled;
+  public BesuControllerBuilder<C> revertReasonEnabled(final boolean revertReasonEnabled) {
+    this.revertReasonEnabled = revertReasonEnabled;
+    return this;
+  }
+
+  public BesuControllerBuilder<C> evmStateTraceEnabled(final boolean evmStateTraceEnabled) {
+    this.evmStateTraceEnabled = evmStateTraceEnabled;
     return this;
   }
 

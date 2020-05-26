@@ -38,11 +38,16 @@ public class EVM {
   private final OperationRegistry operations;
   private final Operation invalidOperation;
   private final Operation endOfScriptStop;
+  private final boolean enableStateTracing;
 
-  public EVM(final OperationRegistry operations, final GasCalculator gasCalculator) {
+  public EVM(
+      final OperationRegistry operations,
+      final GasCalculator gasCalculator,
+      final boolean enableStateTracing) {
     this.operations = operations;
     this.invalidOperation = new InvalidOperation(gasCalculator);
     this.endOfScriptStop = new VirtualOperation(new StopOperation(gasCalculator));
+    this.enableStateTracing = enableStateTracing;
   }
 
   public void runToHalt(final MessageFrame frame, final OperationTracer operationTracer)
@@ -130,8 +135,8 @@ public class EVM {
     }
   }
 
-  private static void logState(final MessageFrame frame, final Optional<Gas> currentGasCost) {
-    if (LOG.isTraceEnabled()) {
+  private void logState(final MessageFrame frame, final Optional<Gas> currentGasCost) {
+    if (enableStateTracing && LOG.isTraceEnabled()) {
       final StringBuilder builder = new StringBuilder();
       builder.append("Depth: ").append(frame.getMessageStackDepth()).append("\n");
       builder.append("Operation: ").append(frame.getCurrentOperation().getName()).append("\n");

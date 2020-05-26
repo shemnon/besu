@@ -81,7 +81,7 @@ public class JumpSubOperationTest {
     registry.put(new BeginSubOperation(gasCalculator), 0);
     registry.put(new JumpSubOperation(gasCalculator), 0);
     registry.put(new ReturnOperation(gasCalculator), 0);
-    evm = new EVM(registry, gasCalculator);
+    evm = new EVM(registry, gasCalculator, false);
   }
 
   @Test

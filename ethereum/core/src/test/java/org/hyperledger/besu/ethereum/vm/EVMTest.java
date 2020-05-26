@@ -39,7 +39,7 @@ public class EVMTest {
 
   @Before
   public void setup() {
-    evm = new EVM(operationRegistry, gasCalculator);
+    evm = new EVM(operationRegistry, gasCalculator, false);
   }
 
   @Test

@@ -40,7 +40,8 @@ public class CliqueProtocolSchedule {
       final GenesisConfigOptions config,
       final NodeKey nodeKey,
       final PrivacyParameters privacyParameters,
-      final boolean isRevertReasonEnabled) {
+      final boolean revertReasonEnabled,
+      final boolean evmStateTraceEnabled) {
 
     final CliqueConfigOptions cliqueConfig = config.getCliqueConfigOptions();
 
@@ -54,15 +55,18 @@ public class CliqueProtocolSchedule {
                 applyCliqueSpecificModifications(
                     epochManager, cliqueConfig.getBlockPeriodSeconds(), localNodeAddress, builder),
             privacyParameters,
-            isRevertReasonEnabled)
+            revertReasonEnabled,
+            evmStateTraceEnabled)
         .createProtocolSchedule();
   }
 
   public static ProtocolSchedule<CliqueContext> create(
       final GenesisConfigOptions config,
       final NodeKey nodeKey,
-      final boolean isRevertReasonEnabled) {
-    return create(config, nodeKey, PrivacyParameters.DEFAULT, isRevertReasonEnabled);
+      final boolean revertReasonEnabled,
+      final boolean evmStateTraceEnabled) {
+    return create(
+        config, nodeKey, PrivacyParameters.DEFAULT, revertReasonEnabled, evmStateTraceEnabled);
   }
 
   private static ProtocolSpecBuilder<CliqueContext> applyCliqueSpecificModifications(

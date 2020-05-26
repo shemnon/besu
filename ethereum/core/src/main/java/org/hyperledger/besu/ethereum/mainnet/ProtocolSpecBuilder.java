@@ -45,7 +45,7 @@ public class ProtocolSpecBuilder<T> {
   private BlockHeaderFunctions blockHeaderFunctions;
   private MainnetBlockProcessor.TransactionReceiptFactory transactionReceiptFactory;
   private DifficultyCalculator<T> difficultyCalculator;
-  private Function<GasCalculator, EVM> evmBuilder;
+  private BiFunction<GasCalculator, Boolean, EVM> evmBuilder;
   private Function<GasCalculator, TransactionValidator> transactionValidatorBuilder;
   private BlockHeaderValidator.Builder<T> blockHeaderValidatorBuilder;
   private BlockHeaderValidator.Builder<T> ommerHeaderValidatorBuilder;
@@ -69,6 +69,7 @@ public class ProtocolSpecBuilder<T> {
   private Optional<EIP1559> eip1559 = Optional.empty();
   private TransactionGasBudgetCalculator gasBudgetCalculator =
       TransactionGasBudgetCalculator.frontier();
+  private boolean enableEvmStateTrace = false;
 
   public ProtocolSpecBuilder<T> gasCalculator(final Supplier<GasCalculator> gasCalculatorBuilder) {
     this.gasCalculatorBuilder = gasCalculatorBuilder;
@@ -103,7 +104,8 @@ public class ProtocolSpecBuilder<T> {
     return this;
   }
 
-  public ProtocolSpecBuilder<T> evmBuilder(final Function<GasCalculator, EVM> evmBuilder) {
+  public ProtocolSpecBuilder<T> evmBuilder(
+      final BiFunction<GasCalculator, Boolean, EVM> evmBuilder) {
     this.evmBuilder = evmBuilder;
     return this;
   }
@@ -266,6 +268,11 @@ public class ProtocolSpecBuilder<T> {
     return this;
   }
 
+  public ProtocolSpecBuilder<T> enableEvmStateTrace(final boolean enableStateTracing) {
+    this.enableEvmStateTrace = enableStateTracing;
+    return this;
+  }
+
   public ProtocolSpec<T> build(final ProtocolSchedule<T> protocolSchedule) {
     checkNotNull(gasCalculatorBuilder, "Missing gasCalculator");
     checkNotNull(evmBuilder, "Missing operation registry");
@@ -293,7 +300,7 @@ public class ProtocolSpecBuilder<T> {
     checkNotNull(eip1559, "Missing eip1559 optional wrapper");
 
     final GasCalculator gasCalculator = gasCalculatorBuilder.get();
-    final EVM evm = evmBuilder.apply(gasCalculator);
+    final EVM evm = evmBuilder.apply(gasCalculator, enableEvmStateTrace);
     final PrecompiledContractConfiguration precompiledContractConfiguration =
         new PrecompiledContractConfiguration(gasCalculator, privacyParameters);
     final TransactionValidator transactionValidator =

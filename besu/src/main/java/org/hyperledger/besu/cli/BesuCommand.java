@@ -825,7 +825,13 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
       names = {"--revert-reason-enabled"},
       description =
           "Enable passing the revert reason back through TransactionReceipts (default: ${DEFAULT-VALUE})")
-  private final Boolean isRevertReasonEnabled = false;
+  private final Boolean revertReasonEnabled = false;
+
+  @Option(
+      names = {"--Xevm-state-trace-enabled"},
+      description =
+          "When logging at TRACE level include detailed EVM state traces (default: ${DEFAULT-VALUE})")
+  private final Boolean evmStateTraceEnabled = false;
 
   @Option(
       names = {"--required-blocks", "--required-block"},
@@ -1408,7 +1414,8 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
         .metricsSystem(metricsSystem.get())
         .privacyParameters(privacyParameters())
         .clock(Clock.systemUTC())
-        .isRevertReasonEnabled(isRevertReasonEnabled)
+        .revertReasonEnabled(revertReasonEnabled)
+        .evmStateTraceEnabled(evmStateTraceEnabled)
         .storageProvider(keyStorageProvider(keyValueStorageName))
         .isPruningEnabled(isPruningEnabled())
         .pruningConfiguration(

@@ -30,7 +30,7 @@ public class MainnetProtocolSchedule {
 
   public static ProtocolSchedule<Void> create() {
     return fromConfig(
-        GenesisConfigFile.mainnet().getConfigOptions(), PrivacyParameters.DEFAULT, false);
+        GenesisConfigFile.mainnet().getConfigOptions(), PrivacyParameters.DEFAULT, false, false);
   }
 
   /**
@@ -39,19 +39,25 @@ public class MainnetProtocolSchedule {
    * @param config {@link GenesisConfigOptions} containing the config options for the milestone
    *     starting points
    * @param privacyParameters the parameters set for private transactions
-   * @param isRevertReasonEnabled whether storing the revert reason is for failed transactions
+   * @param revertReasonEnabled whether storing the revert reason is for failed transactions
    * @return A configured mainnet protocol schedule
    */
   public static ProtocolSchedule<Void> fromConfig(
       final GenesisConfigOptions config,
       final PrivacyParameters privacyParameters,
-      final boolean isRevertReasonEnabled) {
+      final boolean revertReasonEnabled,
+      final boolean evmStateTraceEnabled) {
     if (FixedDifficultyCalculators.isFixedDifficultyInConfig(config)) {
       return FixedDifficultyProtocolSchedule.create(
-          config, privacyParameters, isRevertReasonEnabled);
+          config, privacyParameters, revertReasonEnabled, evmStateTraceEnabled);
     }
     return new ProtocolScheduleBuilder<>(
-            config, DEFAULT_CHAIN_ID, Function.identity(), privacyParameters, isRevertReasonEnabled)
+            config,
+            DEFAULT_CHAIN_ID,
+            Function.identity(),
+            privacyParameters,
+            revertReasonEnabled,
+            evmStateTraceEnabled)
         .createProtocolSchedule();
   }
 
@@ -60,12 +66,14 @@ public class MainnetProtocolSchedule {
    *
    * @param config {@link GenesisConfigOptions} containing the config options for the milestone
    *     starting points
-   * @param isRevertReasonEnabled whether storing the revert reason is for failed transactions
+   * @param revertReasonEnabled whether storing the revert reason is for failed transactions
    * @return A configured mainnet protocol schedule
    */
   public static ProtocolSchedule<Void> fromConfig(
-      final GenesisConfigOptions config, final boolean isRevertReasonEnabled) {
-    return fromConfig(config, PrivacyParameters.DEFAULT, isRevertReasonEnabled);
+      final GenesisConfigOptions config,
+      final boolean revertReasonEnabled,
+      final boolean evmStateTraceEnabled) {
+    return fromConfig(config, PrivacyParameters.DEFAULT, revertReasonEnabled, evmStateTraceEnabled);
   }
 
   /**
@@ -76,6 +84,6 @@ public class MainnetProtocolSchedule {
    * @return A configured mainnet protocol schedule
    */
   public static ProtocolSchedule<Void> fromConfig(final GenesisConfigOptions config) {
-    return fromConfig(config, PrivacyParameters.DEFAULT, false);
+    return fromConfig(config, PrivacyParameters.DEFAULT, false, false);
   }
 }

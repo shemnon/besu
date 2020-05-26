@@ -107,52 +107,58 @@ import org.apache.tuweni.bytes.Bytes32;
 /** Provides EVMs supporting the appropriate operations for mainnet hard forks. */
 abstract class MainnetEvmRegistries {
 
-  static EVM frontier(final GasCalculator gasCalculator) {
+  static EVM frontier(final GasCalculator gasCalculator, final boolean enableStateTracing) {
     final OperationRegistry registry = new OperationRegistry();
 
     registerFrontierOpcodes(registry, gasCalculator, Account.DEFAULT_VERSION);
 
-    return new EVM(registry, gasCalculator);
+    return new EVM(registry, gasCalculator, enableStateTracing);
   }
 
-  static EVM homestead(final GasCalculator gasCalculator) {
+  static EVM homestead(final GasCalculator gasCalculator, final boolean enableEvmStateTrace) {
     final OperationRegistry registry = new OperationRegistry();
 
     registerHomesteadOpcodes(registry, gasCalculator, Account.DEFAULT_VERSION);
 
-    return new EVM(registry, gasCalculator);
+    return new EVM(registry, gasCalculator, enableEvmStateTrace);
   }
 
-  static EVM byzantium(final GasCalculator gasCalculator) {
+  static EVM byzantium(final GasCalculator gasCalculator, final boolean enableEvmStateTrace) {
     final OperationRegistry registry = new OperationRegistry();
 
     registerByzantiumOpcodes(registry, gasCalculator, Account.DEFAULT_VERSION);
 
-    return new EVM(registry, gasCalculator);
+    return new EVM(registry, gasCalculator, enableEvmStateTrace);
   }
 
-  static EVM constantinople(final GasCalculator gasCalculator) {
+  static EVM constantinople(final GasCalculator gasCalculator, final boolean enableEvmStateTrace) {
     final OperationRegistry registry = new OperationRegistry();
 
     registerConstantinopleOpcodes(registry, gasCalculator, Account.DEFAULT_VERSION);
 
-    return new EVM(registry, gasCalculator);
+    return new EVM(registry, gasCalculator, enableEvmStateTrace);
   }
 
-  static EVM istanbul(final GasCalculator gasCalculator, final BigInteger chainId) {
+  static EVM istanbul(
+      final GasCalculator gasCalculator,
+      final BigInteger chainId,
+      final boolean enableEvmStateTrace) {
     final OperationRegistry registry = new OperationRegistry();
 
     registerIstanbulOpcodes(registry, gasCalculator, Account.DEFAULT_VERSION, chainId);
 
-    return new EVM(registry, gasCalculator);
+    return new EVM(registry, gasCalculator, enableEvmStateTrace);
   }
 
-  static EVM berlin(final GasCalculator gasCalculator, final BigInteger chainId) {
+  static EVM berlin(
+      final GasCalculator gasCalculator,
+      final BigInteger chainId,
+      final boolean enableEvmStateTrace) {
     final OperationRegistry registry = new OperationRegistry();
 
     registerBerlinOpcodes(registry, gasCalculator, Account.DEFAULT_VERSION, chainId);
 
-    return new EVM(registry, gasCalculator);
+    return new EVM(registry, gasCalculator, enableEvmStateTrace);
   }
 
   private static void registerFrontierOpcodes(

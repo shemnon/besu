@@ -35,7 +35,8 @@ public class ProtocolScheduleBuilder<C> {
   private final Function<ProtocolSpecBuilder<Void>, ProtocolSpecBuilder<C>> protocolSpecAdapter;
   private final Optional<BigInteger> defaultChainId;
   private final PrivacyParameters privacyParameters;
-  private final boolean isRevertReasonEnabled;
+  private final boolean revertReasonEnabled;
+  private final boolean evmStateTraceEnabled;
   private final FeeMarket feeMarket = FeeMarket.eip1559();
 
   public ProtocolScheduleBuilder(
@@ -43,21 +44,30 @@ public class ProtocolScheduleBuilder<C> {
       final BigInteger defaultChainId,
       final Function<ProtocolSpecBuilder<Void>, ProtocolSpecBuilder<C>> protocolSpecAdapter,
       final PrivacyParameters privacyParameters,
-      final boolean isRevertReasonEnabled) {
+      final boolean revertReasonEnabled,
+      final boolean evmStateTraceEnabled) {
     this(
         config,
         Optional.of(defaultChainId),
         protocolSpecAdapter,
         privacyParameters,
-        isRevertReasonEnabled);
+        revertReasonEnabled,
+        evmStateTraceEnabled);
   }
 
   public ProtocolScheduleBuilder(
       final GenesisConfigOptions config,
       final Function<ProtocolSpecBuilder<Void>, ProtocolSpecBuilder<C>> protocolSpecAdapter,
       final PrivacyParameters privacyParameters,
-      final boolean isRevertReasonEnabled) {
-    this(config, Optional.empty(), protocolSpecAdapter, privacyParameters, isRevertReasonEnabled);
+      final boolean revertReasonEnabled,
+      final boolean evmStateTraceEnabled) {
+    this(
+        config,
+        Optional.empty(),
+        protocolSpecAdapter,
+        privacyParameters,
+        revertReasonEnabled,
+        evmStateTraceEnabled);
   }
 
   private ProtocolScheduleBuilder(
@@ -65,17 +75,18 @@ public class ProtocolScheduleBuilder<C> {
       final Optional<BigInteger> defaultChainId,
       final Function<ProtocolSpecBuilder<Void>, ProtocolSpecBuilder<C>> protocolSpecAdapter,
       final PrivacyParameters privacyParameters,
-      final boolean isRevertReasonEnabled) {
+      final boolean revertReasonEnabled,
+      final boolean evmStateTraceEnabled) {
     this.config = config;
     this.defaultChainId = defaultChainId;
     this.protocolSpecAdapter = protocolSpecAdapter;
     this.privacyParameters = privacyParameters;
-    this.isRevertReasonEnabled = isRevertReasonEnabled;
+    this.revertReasonEnabled = revertReasonEnabled;
+    this.evmStateTraceEnabled = evmStateTraceEnabled;
   }
 
   public ProtocolSchedule<C> createProtocolSchedule() {
-    final Optional<BigInteger> chainId =
-        config.getChainId().map(Optional::of).orElse(defaultChainId);
+    final Optional<BigInteger> chainId = config.getChainId().or(() -> defaultChainId);
     final MutableProtocolSchedule<C> protocolSchedule = new MutableProtocolSchedule<>(chainId);
 
     validateForkOrdering();
@@ -84,12 +95,12 @@ public class ProtocolScheduleBuilder<C> {
         protocolSchedule,
         OptionalLong.of(0),
         MainnetProtocolSpecs.frontierDefinition(
-            config.getContractSizeLimit(), config.getEvmStackSize()));
+            config.getContractSizeLimit(), config.getEvmStackSize(), evmStateTraceEnabled));
     addProtocolSpec(
         protocolSchedule,
         config.getHomesteadBlockNumber(),
         MainnetProtocolSpecs.homesteadDefinition(
-            config.getContractSizeLimit(), config.getEvmStackSize()));
+            config.getContractSizeLimit(), config.getEvmStackSize(), evmStateTraceEnabled));
 
     config
         .getDaoForkBlock()
@@ -101,12 +112,16 @@ public class ProtocolScheduleBuilder<C> {
                   protocolSchedule,
                   OptionalLong.of(daoBlockNumber),
                   MainnetProtocolSpecs.daoRecoveryInitDefinition(
-                      config.getContractSizeLimit(), config.getEvmStackSize()));
+                      config.getContractSizeLimit(),
+                      config.getEvmStackSize(),
+                      evmStateTraceEnabled));
               addProtocolSpec(
                   protocolSchedule,
                   OptionalLong.of(daoBlockNumber + 1),
                   MainnetProtocolSpecs.daoRecoveryTransitionDefinition(
-                      config.getContractSizeLimit(), config.getEvmStackSize()));
+                      config.getContractSizeLimit(),
+                      config.getEvmStackSize(),
+                      evmStateTraceEnabled));
 
               // Return to the previous protocol spec after the dao fork has completed.
               protocolSchedule.putMilestone(daoBlockNumber + 10, originalProtocolSpec);
@@ -116,12 +131,15 @@ public class ProtocolScheduleBuilder<C> {
         protocolSchedule,
         config.getTangerineWhistleBlockNumber(),
         MainnetProtocolSpecs.tangerineWhistleDefinition(
-            config.getContractSizeLimit(), config.getEvmStackSize()));
+            config.getContractSizeLimit(), config.getEvmStackSize(), evmStateTraceEnabled));
     addProtocolSpec(
         protocolSchedule,
         config.getSpuriousDragonBlockNumber(),
         MainnetProtocolSpecs.spuriousDragonDefinition(
-            chainId, config.getContractSizeLimit(), config.getEvmStackSize()));
+            chainId,
+            config.getContractSizeLimit(),
+            config.getEvmStackSize(),
+            evmStateTraceEnabled));
     addProtocolSpec(
         protocolSchedule,
         config.getByzantiumBlockNumber(),
@@ -129,7 +147,8 @@ public class ProtocolScheduleBuilder<C> {
             chainId,
             config.getContractSizeLimit(),
             config.getEvmStackSize(),
-            isRevertReasonEnabled));
+            revertReasonEnabled,
+            evmStateTraceEnabled));
     addProtocolSpec(
         protocolSchedule,
         config.getConstantinopleBlockNumber(),
@@ -137,7 +156,8 @@ public class ProtocolScheduleBuilder<C> {
             chainId,
             config.getContractSizeLimit(),
             config.getEvmStackSize(),
-            isRevertReasonEnabled));
+            revertReasonEnabled,
+            evmStateTraceEnabled));
     addProtocolSpec(
         protocolSchedule,
         config.getConstantinopleFixBlockNumber(),
@@ -145,7 +165,8 @@ public class ProtocolScheduleBuilder<C> {
             chainId,
             config.getContractSizeLimit(),
             config.getEvmStackSize(),
-            isRevertReasonEnabled));
+            revertReasonEnabled,
+            evmStateTraceEnabled));
     addProtocolSpec(
         protocolSchedule,
         config.getIstanbulBlockNumber(),
@@ -153,7 +174,8 @@ public class ProtocolScheduleBuilder<C> {
             chainId,
             config.getContractSizeLimit(),
             config.getEvmStackSize(),
-            isRevertReasonEnabled));
+            revertReasonEnabled,
+            evmStateTraceEnabled));
     addProtocolSpec(
         protocolSchedule,
         config.getMuirGlacierBlockNumber(),
@@ -161,7 +183,8 @@ public class ProtocolScheduleBuilder<C> {
             chainId,
             config.getContractSizeLimit(),
             config.getEvmStackSize(),
-            isRevertReasonEnabled));
+            revertReasonEnabled,
+            evmStateTraceEnabled));
 
     if (ExperimentalEIPs.berlinEnabled) {
       addProtocolSpec(
@@ -171,7 +194,8 @@ public class ProtocolScheduleBuilder<C> {
               chainId,
               config.getContractSizeLimit(),
               config.getEvmStackSize(),
-              isRevertReasonEnabled));
+              revertReasonEnabled,
+              evmStateTraceEnabled));
     }
 
     if (ExperimentalEIPs.eip1559Enabled) {
@@ -182,7 +206,8 @@ public class ProtocolScheduleBuilder<C> {
               chainId,
               config.getContractSizeLimit(),
               config.getEvmStackSize(),
-              isRevertReasonEnabled,
+              revertReasonEnabled,
+              evmStateTraceEnabled,
               config));
 
       addProtocolSpec(
@@ -196,7 +221,8 @@ public class ProtocolScheduleBuilder<C> {
               chainId,
               config.getContractSizeLimit(),
               config.getEvmStackSize(),
-              isRevertReasonEnabled,
+              revertReasonEnabled,
+              evmStateTraceEnabled,
               config));
     }
 
@@ -211,7 +237,9 @@ public class ProtocolScheduleBuilder<C> {
                   protocolSchedule,
                   OptionalLong.of(classicBlockNumber),
                   ClassicProtocolSpecs.classicRecoveryInitDefinition(
-                      config.getContractSizeLimit(), config.getEvmStackSize()));
+                      config.getContractSizeLimit(),
+                      config.getEvmStackSize(),
+                      evmStateTraceEnabled));
               protocolSchedule.putMilestone(classicBlockNumber + 1, originalProtocolSpce);
             });
 
@@ -219,22 +247,34 @@ public class ProtocolScheduleBuilder<C> {
         protocolSchedule,
         config.getEcip1015BlockNumber(),
         ClassicProtocolSpecs.tangerineWhistleDefinition(
-            chainId, config.getContractSizeLimit(), config.getEvmStackSize()));
+            chainId,
+            config.getContractSizeLimit(),
+            config.getEvmStackSize(),
+            evmStateTraceEnabled));
     addProtocolSpec(
         protocolSchedule,
         config.getDieHardBlockNumber(),
         ClassicProtocolSpecs.dieHardDefinition(
-            chainId, config.getContractSizeLimit(), config.getEvmStackSize()));
+            chainId,
+            config.getContractSizeLimit(),
+            config.getEvmStackSize(),
+            evmStateTraceEnabled));
     addProtocolSpec(
         protocolSchedule,
         config.getGothamBlockNumber(),
         ClassicProtocolSpecs.gothamDefinition(
-            chainId, config.getContractSizeLimit(), config.getEvmStackSize()));
+            chainId,
+            config.getContractSizeLimit(),
+            config.getEvmStackSize(),
+            evmStateTraceEnabled));
     addProtocolSpec(
         protocolSchedule,
         config.getDefuseDifficultyBombBlockNumber(),
         ClassicProtocolSpecs.defuseDifficultyBombDefinition(
-            chainId, config.getContractSizeLimit(), config.getEvmStackSize()));
+            chainId,
+            config.getContractSizeLimit(),
+            config.getEvmStackSize(),
+            evmStateTraceEnabled));
     addProtocolSpec(
         protocolSchedule,
         config.getAtlantisBlockNumber(),
@@ -242,7 +282,8 @@ public class ProtocolScheduleBuilder<C> {
             chainId,
             config.getContractSizeLimit(),
             config.getEvmStackSize(),
-            isRevertReasonEnabled));
+            revertReasonEnabled,
+            evmStateTraceEnabled));
     addProtocolSpec(
         protocolSchedule,
         config.getAghartaBlockNumber(),
@@ -250,7 +291,8 @@ public class ProtocolScheduleBuilder<C> {
             chainId,
             config.getContractSizeLimit(),
             config.getEvmStackSize(),
-            isRevertReasonEnabled));
+            revertReasonEnabled,
+            evmStateTraceEnabled));
     addProtocolSpec(
         protocolSchedule,
         config.getPhoenixBlockNumber(),
@@ -258,7 +300,8 @@ public class ProtocolScheduleBuilder<C> {
             chainId,
             config.getContractSizeLimit(),
             config.getEvmStackSize(),
-            isRevertReasonEnabled));
+            revertReasonEnabled,
+            evmStateTraceEnabled));
 
     LOG.info("Protocol schedule created with milestones: {}", protocolSchedule.listMilestones());
     return protocolSchedule;
