@@ -28,7 +28,7 @@ import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 
 /**
- * A {@link MerklePatriciaTrie} that persists trie nodes to a {@link MerkleStorage} key/value store.
+ * A {@link MerklePatriciaTrie} that persists trie nodes.
  *
  * @param <V> The type of values stored by this trie.
  */

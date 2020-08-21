@@ -15,8 +15,7 @@
 package org.hyperledger.besu.ethereum.trie;
 
 /**
- * This exception is thrown when there is an issue retrieving or decoding values from {@link
- * MerkleStorage}.
+ * This exception is thrown when there is an issue retrieving or decoding values from Merkle Tries
  */
 public class MerkleTrieException extends RuntimeException {
 
