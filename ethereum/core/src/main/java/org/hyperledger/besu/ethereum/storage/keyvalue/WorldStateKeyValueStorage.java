@@ -156,25 +156,23 @@ public class WorldStateKeyValueStorage implements WorldStateStorage {
     }
 
     @Override
-    public Updater putAccountStateTrieNode(final Bytes32 nodeHash, final Bytes node) {
+    public void putAccountStateTrieNode(final Bytes32 nodeHash, final Bytes node) {
       if (nodeHash.equals(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH)) {
         // Don't save empty nodes
-        return this;
+        return;
       }
       addedNodes.add(nodeHash);
       transaction.put(nodeHash.toArrayUnsafe(), node.toArrayUnsafe());
-      return this;
     }
 
     @Override
-    public Updater putAccountStorageTrieNode(final Bytes32 nodeHash, final Bytes node) {
+    public void putAccountStorageTrieNode(final Bytes32 nodeHash, final Bytes node) {
       if (nodeHash.equals(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH)) {
         // Don't save empty nodes
-        return this;
+        return;
       }
       addedNodes.add(nodeHash);
       transaction.put(nodeHash.toArrayUnsafe(), node.toArrayUnsafe());
-      return this;
     }
 
     @Override

@@ -59,9 +59,9 @@ public interface WorldStateStorage {
       return putCode(codeHash, code);
     }
 
-    Updater putAccountStateTrieNode(Bytes32 nodeHash, Bytes node);
+    void putAccountStateTrieNode(Bytes32 nodeHash, Bytes node);
 
-    Updater putAccountStorageTrieNode(Bytes32 nodeHash, Bytes node);
+    void putAccountStorageTrieNode(Bytes32 nodeHash, Bytes node);
 
     void commit();
 
