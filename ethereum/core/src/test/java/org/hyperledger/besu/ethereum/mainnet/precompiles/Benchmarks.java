@@ -16,11 +16,16 @@
 
 package org.hyperledger.besu.ethereum.mainnet.precompiles;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.hyperledger.besu.crypto.Hash.keccak256;
+
 import org.hyperledger.besu.crypto.Hash;
+import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.ethereum.mainnet.BerlinGasCalculator;
 import org.hyperledger.besu.ethereum.mainnet.IstanbulGasCalculator;
 import org.hyperledger.besu.ethereum.mainnet.PrecompiledContract;
 
+import java.math.BigInteger;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
@@ -29,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 
 public class Benchmarks {
 
@@ -41,6 +47,35 @@ public class Benchmarks {
 
   static final int MATH_WARMUP = 10_000;
   static final int MATH_ITERATIONS = 1_000;
+
+  public static void benchSecp256k1Recover() {
+    final SECP256K1.PrivateKey privateKey =
+        SECP256K1.PrivateKey.create(
+            new BigInteger("c85ef7d79691fe79573b1a7064c19c1a9819ebdbd1faaab1a8ec92344438aaf4", 16));
+    final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.create(privateKey);
+
+    final Bytes data = Bytes.wrap("This is an example of a signed message.".getBytes(UTF_8));
+    final Bytes32 dataHash = keccak256(data);
+    final SECP256K1.Signature signature = SECP256K1.sign(dataHash, keyPair);
+    //
+    //    final SECP256K1.PublicKey recoveredPublicKey =
+    //        SECP256K1.PublicKey.recoverFromSignature(dataHash, signature).get();
+    //    assertThat(recoveredPublicKey.toString()).isEqualTo(keyPair.getPublicKey().toString());
+    for (int i = 0; i < MATH_WARMUP; i++) {
+      SECP256K1.PublicKey.recoverFromSignature(dataHash, signature);
+    }
+    final Stopwatch timer = Stopwatch.createStarted();
+    for (int i = 0; i < MATH_ITERATIONS; i++) {
+      SECP256K1.PublicKey.recoverFromSignature(dataHash, signature);
+    }
+    timer.stop();
+
+    final double elapsed = timer.elapsed(TimeUnit.NANOSECONDS) / 1.0e9D;
+    final double perCall = elapsed / HASH_ITERATIONS;
+    final double gasSpent = perCall * GAS_PER_SECOND_STANDARD;
+
+    System.out.printf("secp256k1 signature recovery for %,d gas.%n", (int) gasSpent);
+  }
 
   public static void benchSha256() {
     final SHA256PrecompiledContract contract =
@@ -267,12 +302,14 @@ public class Benchmarks {
   private static void benchBNPairing() {
     final Bytes goerli_3617444 =
         Bytes.fromHexString(
-            "0x07402fdc3bc28a434909f24695adea3e9418d9857efc8c71f67a470a17f3cf12"
-                + "255dbc3a8b5c2c1a7a3f8c59e2f5b6e04bc4d7b7bb82fcbe18b2294305c8473b"
-                + "19156e854972d656d1020003e5781972d84081309cdf71baacf6c6e29272f5ff"
-                + "2acded377df8902b7a75de6c0f53c161f3a2ff3f374470b78d5b3c4d826d84d5"
-                + "1731ef3b84913296c30a649461b2ca35e3fcc2e3031ea2386d32f885ff096559"
-                + "0919e7685f6ea605db14f311dede6e83f21937f05cfc53ac1dbe45891c47bf2a"
+            "0x0fc6ebd1758207e311a99674dc77d28128643c057fb9ca2c92b4205b6bf57ed21e50042f97b7a1f2768fa15f6683eca9ee7fa8ee655d94246ab85fb1da3f0b90198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa2b101be01b2f064cba109e065dc0b5e5bf6b64ed4054b82af3a7e6e34c1e20051a4d9ceecf9115a98efd147c4abb2684102d3e925938989153b9ff330523cdb408d554bf59102bbb961ba81107ec71785ef9ce6638e5332b6c1a58b87447d18101cf7cc93bfbf7b2c5f04a3bc9cb8b72bbcf2defcabdceb09860c493bdf1588d02cb2a424885c9e412b94c40905b359e3043275cd29f5b557f008cd0a3e0c0dc204e5d81d86c561f9344ad5f122a625f259996b065b80cbbe74a9ad97b6d7cc2"
+
+            //            "0x07402fdc3bc28a434909f24695adea3e9418d9857efc8c71f67a470a17f3cf12"
+            //                + "255dbc3a8b5c2c1a7a3f8c59e2f5b6e04bc4d7b7bb82fcbe18b2294305c8473b"
+            //                + "19156e854972d656d1020003e5781972d84081309cdf71baacf6c6e29272f5ff"
+            //                + "2acded377df8902b7a75de6c0f53c161f3a2ff3f374470b78d5b3c4d826d84d5"
+            //                + "1731ef3b84913296c30a649461b2ca35e3fcc2e3031ea2386d32f885ff096559"
+            //                + "0919e7685f6ea605db14f311dede6e83f21937f05cfc53ac1dbe45891c47bf2a"
             //                + "1a3fabea802788c8aa88741c6a68f271b221eb75838bb1079381f3f1ae414f40"
             //                + "126308d6cdb6b7efceb1ec0016b99cf7a1e5780f5a9a775d43bc7f2b6fd510e2"
             //                + "11b35cf2c85531eab64b96eb2eef487e0eb60fb9207fe4763e7f6e02dcead646"
@@ -559,37 +596,39 @@ public class Benchmarks {
   }
 
   public static void main(final String[] args) {
-    //    System.out.println("SHA256");
-    //    benchSha256();
-    //    System.out.println("Keccak256");
-    //    benchKeccak256();
-    //    System.out.println("RIPEMD256");
-    //    benchRipeMD();
+    System.out.println("secp256k1Recover");
+    benchSecp256k1Recover();
+    System.out.println("SHA256");
+    benchSha256();
+    System.out.println("Keccak256");
+    benchKeccak256();
+    System.out.println("RIPEMD256");
+    benchRipeMD();
     System.out.println("BNADD");
     benchBNADD();
     System.out.println("BNMUL");
     benchBNMUL();
     System.out.println("BNPairing");
     benchBNPairing();
-    //    System.out.println("ModEXP");
-    //    benchModExp();
-    //    System.out.println("G1Add");
-    //    benchBLS12G1Add();
-    //    System.out.println("G1Mul");
-    //    benchBLS12G1Mul();
-    //    System.out.println("G1Multiexp");
-    //    benchBLS12G1MultiExp();
-    //    System.out.println("G2Add");
-    //    benchBLS12G2Add();
-    //    System.out.println("G2Mul");
-    //    benchBLS12G2Mul();
-    //    System.out.println("G2Multiexp");
-    //    benchBLS12G2MultiExp();
-    //    System.out.println("BLS Pairing");
-    //    benchBLS12Pair();
-    //    System.out.println("MapFPtoG1");
-    //    benchBLS12MapFPTOG1();
-    //    System.out.println("MapFP2toG2");
-    //    benchBLS12MapFP2TOG2();
+    System.out.println("ModEXP");
+    benchModExp();
+    System.out.println("G1Add");
+    benchBLS12G1Add();
+    System.out.println("G1Mul");
+    benchBLS12G1Mul();
+    System.out.println("G1Multiexp");
+    benchBLS12G1MultiExp();
+    System.out.println("G2Add");
+    benchBLS12G2Add();
+    System.out.println("G2Mul");
+    benchBLS12G2Mul();
+    System.out.println("G2Multiexp");
+    benchBLS12G2MultiExp();
+    System.out.println("BLS Pairing");
+    benchBLS12Pair();
+    System.out.println("MapFPtoG1");
+    benchBLS12MapFPTOG1();
+    System.out.println("MapFP2toG2");
+    benchBLS12MapFP2TOG2();
   }
 }
