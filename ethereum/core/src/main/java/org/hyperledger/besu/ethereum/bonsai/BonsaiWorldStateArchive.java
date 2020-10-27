@@ -66,13 +66,13 @@ public class BonsaiWorldStateArchive implements WorldStateArchive {
 
   @Override
   public Optional<MutableWorldState> getMutable(final Hash rootHash) {
-    if (rootHash.equals(persistedState.rootHash())) {
+//    if (rootHash.equals(persistedState.rootHash())) {
       return Optional.of(persistedState);
-    } else {
-
-      //      System.out.println(persistedState.rootHash());
-      return Optional.empty();
-    }
+//    } else {
+//
+//      //      System.out.println(persistedState.rootHash());
+//      return Optional.empty();
+//    }
   }
 
   @Override
