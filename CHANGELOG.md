@@ -3,6 +3,7 @@
 ## 20.10.4
 
 ### Additions and Improvements
+* Added revert reason to eth_estimateGas RPC call. [\#1730](https://github.com/hyperledger/besu/pull/1730)
 
 ### Bug Fixes
 
