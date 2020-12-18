@@ -40,7 +40,7 @@ import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
 
-public class BonsaiPersistedWorldState implements MutableWorldState, BonsaiWorldState {
+public class BonsaiPersistedWorldState implements MutableWorldState, BonsaiWorldView {
 
   private static final byte[] WORLD_ROOT_KEY = "worldRoot".getBytes(StandardCharsets.UTF_8);
 
@@ -50,10 +50,10 @@ public class BonsaiPersistedWorldState implements MutableWorldState, BonsaiWorld
   private final KeyValueStorage trieBranchStorage;
   private final KeyValueStorage trieLogStorage;
 
-  private Bytes32 worldStateRootHash;
-
   private final BonsaiWorldStateArchive archive;
-  private BonsaiWorldStateUpdater updater;
+  private final BonsaiWorldStateUpdater updater;
+
+  private Hash worldStateRootHash;
 
   public BonsaiPersistedWorldState(
       final BonsaiWorldStateArchive archive,
@@ -69,8 +69,13 @@ public class BonsaiPersistedWorldState implements MutableWorldState, BonsaiWorld
     this.trieBranchStorage = trieBranchStorage;
     this.trieLogStorage = trieLogStorage;
     worldStateRootHash =
-        Bytes32.wrap(
-            trieBranchStorage.get(WORLD_ROOT_KEY).map(Bytes::wrap).orElse(Hash.EMPTY_TRIE_HASH));
+        Hash.wrap(
+            Bytes32.wrap(
+                trieBranchStorage
+                    .get(WORLD_ROOT_KEY)
+                    .map(Bytes::wrap)
+                    .orElse(Hash.EMPTY_TRIE_HASH)));
+    updater = new BonsaiWorldStateUpdater(this);
   }
 
   public BonsaiWorldStateArchive getArchive() {
@@ -163,7 +168,7 @@ public class BonsaiPersistedWorldState implements MutableWorldState, BonsaiWorld
           } else {
             final Bytes32 updatedStorageBytes = updatedStorage.toBytes();
             storageTx.put(writeAddress, updatedStorageBytes.toArrayUnsafe());
-            storageTrie.put(keyHash, rlpEncode(updatedStorageBytes));
+            storageTrie.put(keyHash, BonsaiWorldView.encodeTrieValue(updatedStorageBytes));
           }
         }
 
@@ -214,18 +219,23 @@ public class BonsaiPersistedWorldState implements MutableWorldState, BonsaiWorld
         }
       }
 
+      // TODO write to a cache and then generate a layer update from that and the
+      // DB tx updates.  Right now it is just DB updates.
       accountTrie.commit((location, hash, value) -> writeTrieNode(trieBranchTx, location, value));
-      worldStateRootHash = accountTrie.getRootHash();
+      worldStateRootHash = Hash.wrap(accountTrie.getRootHash());
       trieBranchTx.put(WORLD_ROOT_KEY, worldStateRootHash.toArrayUnsafe());
 
       // for manicured tries and composting, trim and compost branches here
 
       if (blockHash != null) {
+        // FIXME this is broken for anything other than genesis.
+        // it will continue to work but the witness is missing trie nodes
+        // but since it's the persisted layer it will fall through to
+        // the persisted data and still work
         final TrieLogLayer trieLog = updater.generateTrieLog(blockHash);
         trieLog.freeze();
-        // TODO add to archive here, but only once we get persisted follow distance implemented
-        // archive.addLayeredWorldState(new BonsaiLayeredWorldState(this, trieLog));
-
+        archive.addLayeredWorldState(
+            new BonsaiLayeredWorldState(this, worldStateRootHash, trieLog));
         final BytesValueRLPOutput rlpLog = new BytesValueRLPOutput();
         trieLog.writeTo(rlpLog);
         trieLogTx.put(blockHash.toArrayUnsafe(), rlpLog.encoded().toArrayUnsafe());
@@ -250,17 +260,8 @@ public class BonsaiPersistedWorldState implements MutableWorldState, BonsaiWorld
     }
   }
 
-  private static Bytes rlpEncode(final Bytes bytes) {
-    final BytesValueRLPOutput out = new BytesValueRLPOutput();
-    out.writeBytes(bytes.trimLeadingZeros());
-    return out.encoded();
-  }
-
   @Override
   public WorldUpdater updater() {
-    if (updater == null) {
-      updater = new BonsaiWorldStateUpdater(this);
-    }
     return updater;
   }
 
@@ -286,8 +287,13 @@ public class BonsaiPersistedWorldState implements MutableWorldState, BonsaiWorld
     if (nodeHash.equals(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH)) {
       return Optional.of(MerklePatriciaTrie.EMPTY_TRIE_NODE);
     } else {
-      return trieBranchStorage.get(location.toArrayUnsafe()).map(Bytes::wrap);
+      return getStateTrieNode(location);
     }
+  }
+
+  @Override
+  public Optional<Bytes> getStateTrieNode(final Bytes location) {
+    return trieBranchStorage.get(location.toArrayUnsafe()).map(Bytes::wrap);
   }
 
   private void writeTrieNode(

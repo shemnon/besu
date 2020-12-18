@@ -16,16 +16,16 @@
 
 package org.hyperledger.besu.ethereum.bonsai;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import org.hyperledger.besu.ethereum.core.Account;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.core.WorldState;
+import org.hyperledger.besu.ethereum.worldstate.StateTrieAccountValue;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.stream.Stream;
 
 import org.apache.tuweni.bytes.Bytes;
@@ -33,21 +33,83 @@ import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
 
 /** A World State backed first by trie log layer and then by another world state. */
-public class BonsaiLayeredWorldState implements BonsaiWorldState, WorldState {
+public class BonsaiLayeredWorldState implements BonsaiWorldView, WorldState {
 
-  private final BonsaiWorldState parent;
-  private final TrieLogLayer trieLog;
-  private final Map<Address, Account> cachedAccounts = new HashMap<>();
+  final BonsaiWorldView parent;
+  private BonsaiLayeredWorldState canonicalNext;
+  final TrieLogLayer trieLog;
 
-  public BonsaiLayeredWorldState(final BonsaiWorldState parent, final TrieLogLayer trieLog) {
-    checkArgument(trieLog.isFrozen(), "TrieLogs must be frozen to be used as world state.");
+  Hash worldStateRootHash;
+
+  BonsaiLayeredWorldState(
+      final BonsaiWorldView parent, final Hash worldStateRootHash, final TrieLogLayer trieLog) {
+    // checkArgument(trieLog.isFrozen(), "TrieLogs must be frozen to be used as world state.");
     this.parent = parent;
+    this.worldStateRootHash = worldStateRootHash;
     this.trieLog = trieLog;
+  }
+
+  public BonsaiWorldView getParent() {
+    return parent;
+  }
+
+  void makeCanonicalLayer() {
+    // do this iteratively because in theory we could be thousands deep and that
+    // would blow up the call stack
+    BonsaiWorldView currentLayer = this;
+    BonsaiLayeredWorldState newNext = null;
+    while (currentLayer instanceof BonsaiLayeredWorldState) {
+      final BonsaiLayeredWorldState castedLayer = (BonsaiLayeredWorldState) currentLayer;
+      if (castedLayer.canonicalNext == newNext) {
+        // stop iterating as we have stopped updating
+        break;
+      }
+      castedLayer.canonicalNext = newNext;
+      newNext = castedLayer;
+      currentLayer = castedLayer.parent;
+    }
   }
 
   @Override
   public Bytes getCode(final Address address) {
-    return trieLog.getCode(address).orElseGet(() -> parent.getCode(address));
+    // this must be iterative and lambda light because the stack may blow up
+    // mainly because we don't have tail calls.
+    BonsaiLayeredWorldState currentLayer = this;
+    while (currentLayer != null) {
+      final Optional<Bytes> maybeCode = currentLayer.trieLog.getCode(address);
+      if (maybeCode.isPresent()) {
+        return maybeCode.get();
+      }
+      if (currentLayer.parent == null) {
+        currentLayer = null;
+      } else if (currentLayer.parent instanceof BonsaiLayeredWorldState) {
+        currentLayer = (BonsaiLayeredWorldState) currentLayer.parent;
+      } else {
+        return currentLayer.parent.getCode(address);
+      }
+    }
+    return null;
+  }
+
+  @Override
+  public Optional<Bytes> getStateTrieNode(final Bytes location) {
+    // this must be iterative and lambda light because the stack may blow up
+    // mainly because we don't have tail calls.
+    BonsaiLayeredWorldState currentLayer = this;
+    while (currentLayer != null) {
+      final Optional<Bytes> maybeNode = currentLayer.trieLog.getStateTrieNode(location);
+      if (maybeNode.isPresent()) {
+        return maybeNode;
+      }
+      if (currentLayer.parent == null) {
+        currentLayer = null;
+      } else if (currentLayer.parent instanceof BonsaiLayeredWorldState) {
+        currentLayer = (BonsaiLayeredWorldState) currentLayer.parent;
+      } else {
+        return currentLayer.parent.getStateTrieNode(location);
+      }
+    }
+    return Optional.empty();
   }
 
   @Override
@@ -57,9 +119,23 @@ public class BonsaiLayeredWorldState implements BonsaiWorldState, WorldState {
 
   @Override
   public Optional<UInt256> getStorageValueBySlotHash(final Address address, final Hash slotHash) {
-    return trieLog
-        .getStorageBySlotHash(address, slotHash)
-        .or(() -> parent.getStorageValueBySlotHash(address, slotHash));
+    // this must be iterative and lambda light because the stack may blow up
+    // mainly because we don't have tail calls.
+    BonsaiLayeredWorldState currentLayer = this;
+    while (currentLayer != null) {
+      final Optional<UInt256> maybeValue = currentLayer.trieLog.getStorageBySlotHash(address, slotHash);
+      if (maybeValue.isPresent()) {
+        return maybeValue;
+      }
+      if (currentLayer.parent == null) {
+        currentLayer = null;
+      } else if (currentLayer.parent instanceof BonsaiLayeredWorldState) {
+        currentLayer = (BonsaiLayeredWorldState) currentLayer.parent;
+      } else {
+        return currentLayer.parent.getStorageValueBySlotHash(address, slotHash);
+      }
+    }
+    return Optional.empty();
   }
 
   @Override
@@ -70,31 +146,70 @@ public class BonsaiLayeredWorldState implements BonsaiWorldState, WorldState {
 
   @Override
   public Map<Bytes32, Bytes> getAllAccountStorage(final Address address, final Hash rootHash) {
-    final Map<Bytes32, Bytes> results = parent.getAllAccountStorage(address, rootHash);
-    trieLog
-        .streamStorageChanges(address)
-        .forEach(entry -> results.put(entry.getKey(), entry.getValue().getUpdated().toBytes()));
+    // this must be iterative and lambda light because the stack may blow up
+    // mainly because we don't have tail calls.
+    final Map<Bytes32, Bytes> results = new HashMap<>();
+    BonsaiLayeredWorldState currentLayer = this;
+    while (currentLayer != null) {
+      if (currentLayer.trieLog.hasStorageChanges(address)) {
+        currentLayer.trieLog.streamStorageChanges(address).forEach(
+            entry -> {
+              if (!results.containsKey(entry.getKey())) {
+                final UInt256 value = entry.getValue().getUpdated();
+                // yes, store the nulls.  If it was deleted it should stay deleted
+                results.put(entry.getKey(), value == null ? null : value.toBytes());
+              }
+            }
+        );
+      }
+      if (currentLayer.parent == null) {
+        currentLayer = null;
+      } else if (currentLayer.parent instanceof BonsaiLayeredWorldState) {
+        currentLayer = (BonsaiLayeredWorldState) currentLayer.parent;
+      } else {
+        final Account account = currentLayer.parent.get(address);
+        if (account != null) {
+          account
+              .storageEntriesFrom(Hash.ZERO, Integer.MAX_VALUE)
+              .forEach(
+                  (k, v) -> {
+                    if (!results.containsKey(k)) {
+                      results.put(k, v.getValue().toBytes());
+                    }
+                  });
+          }
+        currentLayer = null;
+      }
+    }
     return results;
   }
 
   @Override
   public Account get(final Address address) {
-    return cachedAccounts.computeIfAbsent(
-        address,
-        addr ->
-            trieLog
-                .getAccount(addr)
-                .map(
-                    stateTrieAccountValue ->
-                        (Account)
-                            new BonsaiAccount(
-                                BonsaiLayeredWorldState.this, addr, stateTrieAccountValue, false))
-                .orElseGet(() -> parent.get(address)));
+    // this must be iterative and lambda light because the stack may blow up
+    // mainly because we don't have tail calls.
+    BonsaiLayeredWorldState currentLayer = this;
+    while (currentLayer != null) {
+      final Optional<StateTrieAccountValue> maybeStateTrieAccount =
+          currentLayer.trieLog.getAccount(address);
+      if (maybeStateTrieAccount.isPresent()) {
+        return new BonsaiAccount(
+            BonsaiLayeredWorldState.this, address, maybeStateTrieAccount.get(), false);
+      }
+      if (currentLayer.parent == null) {
+        currentLayer = null;
+      } else if (currentLayer.parent instanceof BonsaiLayeredWorldState) {
+        currentLayer = (BonsaiLayeredWorldState) currentLayer.parent;
+      } else {
+        return currentLayer.parent.get(address);
+      }
+    }
+    return null;
   }
 
   @Override
   public Hash rootHash() {
-    return trieLog.getBlockHash();
+    return worldStateRootHash;
   }
 
   @Override

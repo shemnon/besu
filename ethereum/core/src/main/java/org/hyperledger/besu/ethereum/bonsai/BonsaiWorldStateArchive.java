@@ -52,6 +52,17 @@ public class BonsaiWorldStateArchive implements WorldStateArchive {
     layeredWorldStates = new HashMap<>();
   }
 
+   void addLayeredWorldState(final BonsaiLayeredWorldState worldState) {
+    layeredWorldStates.put(worldState.rootHash(), worldState);
+    worldState.makeCanonicalLayer();
+  }
+
+  @Override
+  public boolean isWorldStateAvailable(final Hash rootHash) {
+    return layeredWorldStates.containsKey(rootHash)
+        || persistedState.rootHash().equals(rootHash) /* || check disk storage */;
+  }
+
   @Override
   public Optional<WorldState> get(final Hash rootHash) {
     if (layeredWorldStates.containsKey(rootHash)) {
@@ -63,20 +74,12 @@ public class BonsaiWorldStateArchive implements WorldStateArchive {
     }
   }
 
-  public void addLayeredWorldState(final BonsaiLayeredWorldState worldState) {
-    layeredWorldStates.put(worldState.rootHash(), worldState);
-  }
-
-  @Override
-  public boolean isWorldStateAvailable(final Hash rootHash) {
-    return layeredWorldStates.containsKey(rootHash)
-        || persistedState.rootHash().equals(rootHash) /* || check disk storage */;
-  }
-
   @Override
   public Optional<MutableWorldState> getMutable(final Hash rootHash) {
-    if (rootHash.equals(persistedState.rootHash())) {
-      return Optional.of(persistedState);
+    if (layeredWorldStates.containsKey(rootHash)) {
+      return Optional.of(new BonsaiMutableLayeredWorldState(this, layeredWorldStates.get(rootHash), rootHash));
+    } else if (rootHash.equals(persistedState.rootHash())) {
+      return Optional.of(new BonsaiMutableLayeredWorldState(this, persistedState, persistedState.rootHash()));
     } else {
       return Optional.empty();
     }

@@ -24,6 +24,7 @@ import org.hyperledger.besu.ethereum.rlp.RLPInput;
 import org.hyperledger.besu.ethereum.rlp.RLPOutput;
 import org.hyperledger.besu.ethereum.worldstate.StateTrieAccountValue;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -33,6 +34,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
 
 /**
@@ -45,10 +47,30 @@ import org.apache.tuweni.units.bigints.UInt256;
 public class TrieLogLayer {
 
   private Hash blockHash;
-  private final Map<Address, BonsaiValue<StateTrieAccountValue>> accounts = new TreeMap<>();
-  private final Map<Address, BonsaiValue<Bytes>> code = new TreeMap<>();
-  private final Map<Address, Map<Hash, BonsaiValue<UInt256>>> storage = new TreeMap<>();
+  private final Map<Address, BonsaiValue<StateTrieAccountValue>> accounts;
+  private final Map<Address, BonsaiValue<Bytes>> code;
+  private final Map<Address, Map<Hash, BonsaiValue<UInt256>>> storage;
+  private final Map<Bytes, BonsaiValue<Bytes>> trieNodes;
   private boolean frozen = false;
+
+  TrieLogLayer() {
+    // TODO when tuweni fixes zero length byte comparison consider TreeMap
+    accounts = new HashMap<>();
+    code = new HashMap<>();
+    storage = new HashMap<>();
+    trieNodes = new HashMap<>();
+  }
+
+  // do not copy frozen.  All copies are mutable by default
+  @SuppressWarnings("CopyConstructorMissesField")
+  TrieLogLayer(final TrieLogLayer copy) {
+    // TODO when tuweni fixes zero length byte comparison consider TreeMap
+    this.blockHash = copy.blockHash;
+    this.accounts = new HashMap<>(copy.accounts);
+    this.code = new HashMap<>(copy.code);
+    this.storage = new HashMap<>(copy.storage);
+    this.trieNodes = new HashMap<>(copy.trieNodes);
+  }
 
   /** Locks the layer so no new changes can be added; */
   void freeze() {
@@ -64,7 +86,7 @@ public class TrieLogLayer {
     this.blockHash = blockHash;
   }
 
-  public void addAccountChange(
+  void addAccountChange(
       final Address address,
       final StateTrieAccountValue oldValue,
       final StateTrieAccountValue newValue) {
@@ -86,6 +108,17 @@ public class TrieLogLayer {
     storage
         .computeIfAbsent(address, a -> new TreeMap<>())
         .put(slotHash, new BonsaiValue<>(oldValue, newValue));
+  }
+
+  void addAccountTrieNode(final Bytes location, final Bytes oldNode, final Bytes newNode) {
+    checkState(!frozen, "Layer is Frozen");
+    trieNodes.put(location, new BonsaiValue<>(oldNode, newNode));
+  }
+
+  void addStorageTrieNode(
+      final Address address, final Bytes location, final Bytes oldNode, final Bytes newNode) {
+    checkState(!frozen, "Layer is Frozen");
+    trieNodes.put(Bytes.concatenate(address, location), new BonsaiValue<>(oldNode, newNode));
   }
 
   static TrieLogLayer readFrom(final RLPInput input) {
@@ -134,6 +167,9 @@ public class TrieLogLayer {
         input.leaveList();
         newLayer.storage.put(address, storageChanges);
       }
+
+      //TODO add trie nodes
+
       // lenient leave list for forward compatible additions.
       input.leaveListLenient();
     }
@@ -186,6 +222,9 @@ public class TrieLogLayer {
         }
         output.endList();
       }
+
+      //TODO write trie nodes
+
       output.endList(); // this change
     }
     output.endList(); // container
@@ -201,6 +240,10 @@ public class TrieLogLayer {
 
   Stream<Map.Entry<Address, Map<Hash, BonsaiValue<UInt256>>>> streamStorageChanges() {
     return storage.entrySet().stream();
+  }
+
+  boolean hasStorageChanges(final Address address) {
+    return storage.containsKey(address);
   }
 
   Stream<Map.Entry<Hash, BonsaiValue<UInt256>>> streamStorageChanges(final Address address) {
@@ -232,5 +275,9 @@ public class TrieLogLayer {
 
   public Optional<StateTrieAccountValue> getAccount(final Address address) {
     return Optional.ofNullable(accounts.get(address)).map(BonsaiValue::getUpdated);
+  }
+
+  public Optional<Bytes> getStateTrieNode(final Bytes location) {
+    return Optional.ofNullable(trieNodes.get(location)).map(BonsaiValue::getUpdated);
   }
 }

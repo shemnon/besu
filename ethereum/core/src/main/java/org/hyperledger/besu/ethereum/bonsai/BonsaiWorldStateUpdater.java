@@ -43,9 +43,8 @@ import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
 
-public class BonsaiWorldStateUpdater
-    extends AbstractWorldUpdater<BonsaiPersistedWorldState, BonsaiAccount>
-    implements BonsaiWorldState {
+public class BonsaiWorldStateUpdater extends AbstractWorldUpdater<BonsaiWorldView, BonsaiAccount>
+    implements BonsaiWorldView {
 
   private final Map<Address, BonsaiValue<BonsaiAccount>> accountsToUpdate = new HashMap<>();
   private final Map<Address, BonsaiValue<Bytes>> codeToUpdate = new HashMap<>();
@@ -56,7 +55,7 @@ public class BonsaiWorldStateUpdater
   // alternative was to keep a giant pre-image cache of the entire trie.
   private final Map<Address, Map<Hash, BonsaiValue<UInt256>>> storageToUpdate = new HashMap<>();
 
-  BonsaiWorldStateUpdater(final BonsaiPersistedWorldState world) {
+  BonsaiWorldStateUpdater(final BonsaiWorldView world) {
     super(world);
   }
 
@@ -273,6 +272,12 @@ public class BonsaiWorldStateUpdater
   }
 
   @Override
+  public Optional<Bytes> getStateTrieNode(final Bytes location) {
+    // updater doesn't track trie nodes.  Always a miss.
+    return Optional.empty();
+  }
+
+  @Override
   public UInt256 getStorageValue(final Address address, final UInt256 storageKey) {
     // TODO maybe log the read into the trie layer?
     final Hash slotHashBytes = Hash.hash(storageKey.toBytes());
@@ -325,6 +330,11 @@ public class BonsaiWorldStateUpdater
 
   public TrieLogLayer generateTrieLog(final Hash blockHash) {
     final TrieLogLayer layer = new TrieLogLayer();
+    importIntoTrieLog(layer, blockHash);
+    return layer;
+  }
+
+  public void importIntoTrieLog(final TrieLogLayer layer, final Hash blockHash) {
     layer.setBlockHash(blockHash);
     for (final Map.Entry<Address, BonsaiValue<BonsaiAccount>> updatedAccount :
         accountsToUpdate.entrySet()) {
@@ -371,8 +381,6 @@ public class BonsaiWorldStateUpdater
             slotUpdate.getValue().getUpdated());
       }
     }
-
-    return layer;
   }
 
   public void rollForward(final TrieLogLayer layer) {

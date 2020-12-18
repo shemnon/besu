@@ -28,6 +28,7 @@ import org.hyperledger.besu.ethereum.core.WorldUpdater;
 import org.hyperledger.besu.ethereum.rlp.RLP;
 import org.hyperledger.besu.ethereum.rlp.RLPException;
 import org.hyperledger.besu.ethereum.rlp.RLPInput;
+import org.hyperledger.besu.ethereum.trie.DumpVisitor;
 import org.hyperledger.besu.ethereum.trie.MerklePatriciaTrie;
 import org.hyperledger.besu.ethereum.trie.StoredMerklePatriciaTrie;
 
@@ -169,7 +170,7 @@ public class DefaultMutableWorldState implements MutableWorldState {
   }
 
   @Override
-  public void persist(final Hash blockhash) {
+  public void persist(final Hash blockHash) {
     final WorldStateStorage.Updater stateUpdater = worldStateStorage.updater();
     // Store updated code
     for (final Bytes code : updatedAccountCode.values()) {
@@ -195,6 +196,22 @@ public class DefaultMutableWorldState implements MutableWorldState {
     // Push changes to underlying storage
     preimageUpdater.commit();
     stateUpdater.commit();
+
+    if ("0x5297f2a4a699ba7d038a229a8eb7ab29d0073b37376ff0311f2bd9c608411830"
+        .equals(blockHash.toHexString())
+        || "0x9a256544469a112ce2e1ac2bce091e381ca1ec5db4b22db47092fbd6a8b2fef4"
+        .equals(blockHash.toHexString())
+        || "0x448bae8a48930498f17454895a5a0eee55835acea327a6262627bbe6d53d7bb0"
+        .equals(blockHash.toHexString())) {
+      try {
+        System.out.println("Dumping " + blockHash.toHexString());
+        final var dumper = new DumpVisitor<Bytes>();
+        ((StoredMerklePatriciaTrie)accountStateTrie).acceptAtRoot(dumper);
+        System.out.println("----");
+      } catch (Exception e) {
+        e.printStackTrace(System.out);
+      }
+    }
   }
 
   private Optional<UInt256> getStorageTrieKeyPreimage(final Bytes32 trieKey) {
