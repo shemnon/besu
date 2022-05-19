@@ -28,6 +28,7 @@ import org.hyperledger.besu.ethereum.p2p.discovery.PeerDiscoveryAgent;
 import org.hyperledger.besu.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import org.hyperledger.besu.ethereum.p2p.discovery.VertxPeerDiscoveryAgent;
 import org.hyperledger.besu.ethereum.p2p.discovery.internal.PeerTable;
+import org.hyperledger.besu.ethereum.p2p.discovery.internal.EthDNSIterator;
 import org.hyperledger.besu.ethereum.p2p.peers.DefaultPeerPrivileges;
 import org.hyperledger.besu.ethereum.p2p.peers.EnodeURLImpl;
 import org.hyperledger.besu.ethereum.p2p.peers.LocalNode;
@@ -56,6 +57,7 @@ import org.hyperledger.besu.nat.upnp.UpnpNatManager;
 import org.hyperledger.besu.plugin.data.EnodeURL;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -65,6 +67,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -77,9 +80,10 @@ import java.util.stream.Stream;
 import com.google.common.annotations.VisibleForTesting;
 import io.vertx.core.Vertx;
 import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.devp2p.EthereumNodeRecord;
-import org.apache.tuweni.discovery.DNSDaemon;
-import org.apache.tuweni.discovery.DNSDaemonListener;
+import org.bouncycastle.math.ec.ECPoint;
+import org.bouncycastle.math.ec.custom.sec.SecP256K1Curve;
+import org.ethereum.beacon.discovery.schema.EnrField;
+import org.ethereum.beacon.discovery.schema.NodeRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,6 +131,8 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   private static final Logger LOG = LoggerFactory.getLogger(DefaultP2PNetwork.class);
 
+  private static final SecP256K1Curve curve = new SecP256K1Curve();
+
   private final ScheduledExecutorService peerConnectionScheduler =
       Executors.newSingleThreadScheduledExecutor();
   private final PeerDiscoveryAgent peerDiscoveryAgent;
@@ -146,8 +152,8 @@ public class DefaultP2PNetwork implements P2PNetwork {
   private final AtomicBoolean stopped = new AtomicBoolean(false);
   private final CountDownLatch shutdownLatch = new CountDownLatch(2);
   private final Duration shutdownTimeout = Duration.ofSeconds(15);
-  private final Vertx vertx;
-  private DNSDaemon dnsDaemon;
+  private final List<DiscoveryPeer> dnsPeers = new ArrayList<>();
+  private ExecutorService ethDnsExecutor;
 
   /**
    * Creates a peer networking service for production purposes.
@@ -156,18 +162,17 @@ public class DefaultP2PNetwork implements P2PNetwork {
    * public IP address), as well as TCP and UDP port numbers for the RLPx agent and the discovery
    * agent, respectively.
    *
-   * @param localNode A representation of the local node
+   * @param localNode          A representation of the local node
    * @param peerDiscoveryAgent The agent responsible for discovering peers on the network.
-   * @param nodeKey The node key through which cryptographic operations can be performed
-   * @param config The network configuration to use.
-   * @param peerPermissions An object that determines whether peers are allowed to connect
-   * @param natService The NAT environment manager.
-   * @param maintainedPeers A collection of peers for which we are expected to maintain connections
-   * @param reputationManager An object that inspect disconnections for misbehaving peers that can
-   *     then be blacklisted.
-   * @param vertx the Vert.x instance managing network resources
+   * @param nodeKey            The node key through which cryptographic operations can be performed
+   * @param config             The network configuration to use.
+   * @param peerPermissions    An object that determines whether peers are allowed to connect
+   * @param natService         The NAT environment manager.
+   * @param maintainedPeers    A collection of peers for which we are expected to maintain connections
+   * @param reputationManager  An object that inspect disconnections for misbehaving peers that can
+   *                           then be blacklisted.
    */
-  DefaultP2PNetwork(
+  private DefaultP2PNetwork(
       final MutableLocalNode localNode,
       final PeerDiscoveryAgent peerDiscoveryAgent,
       final RlpxAgent rlpxAgent,
@@ -176,8 +181,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
       final PeerPermissions peerPermissions,
       final NatService natService,
       final MaintainedPeers maintainedPeers,
-      final PeerDenylistManager reputationManager,
-      final Vertx vertx) {
+      final PeerDenylistManager reputationManager) {
     this.localNode = localNode;
     this.peerDiscoveryAgent = peerDiscoveryAgent;
     this.rlpxAgent = rlpxAgent;
@@ -187,7 +191,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
     this.nodeId = nodeKey.getPublicKey().getEncodedBytes();
     this.peerPermissions = peerPermissions;
-    this.vertx = vertx;
 
     final int maxPeers = rlpxAgent.getMaxPeers();
     LOG.debug("setting maxPeers {}", maxPeers);
@@ -214,29 +217,30 @@ public class DefaultP2PNetwork implements P2PNetwork {
     final int configuredDiscoveryPort = config.getDiscovery().getBindPort();
     final int configuredRlpxPort = config.getRlpx().getBindPort();
 
-    Optional.ofNullable(config.getDiscovery().getDNSDiscoveryURL())
-        .ifPresent(
-            disco -> {
-              // These lists are updated every 12h
-              // We retrieve the list every 10 minutes (600000 msec)
-              LOG.info("Starting DNS discovery with URL {}", disco);
-              config
-                  .getDnsDiscoveryServerOverride()
-                  .ifPresent(
-                      dnsServer ->
-                          LOG.info(
-                              "Starting DNS discovery with DNS Server override {}", dnsServer));
-
-              dnsDaemon =
-                  new DNSDaemon(
-                      disco,
-                      createDaemonListener(),
-                      0L,
-                      600000L,
-                      config.getDnsDiscoveryServerOverride().orElse(null),
-                      vertx);
-              dnsDaemon.start();
-            });
+//    //TODO REMOVE
+//     Optional.ofNullable(config.getDiscovery().getDNSDiscoveryURL())
+//        .ifPresent(
+//            disco -> {
+//              // These lists are updated every 12h
+//              // We retrieve the list every 10 minutes (600000 msec)
+//              LOG.info("Starting DNS discovery with URL {}", disco);
+//              config
+//                  .getDnsDiscoveryServerOverride()
+//                  .ifPresent(
+//                      dnsServer ->
+//                          LOG.info(
+//                              "Starting DNS discovery with DNS Server override {}", dnsServer));
+//
+//              dnsDaemon =
+//                  new DNSDaemon(
+//                      disco,
+//                      createDaemonListener(),
+//                      0L,
+//                      600000L,
+//                      config.getDnsDiscoveryServerOverride().orElse(null),
+//                      vertx);
+//              dnsDaemon.start();
+//            });
 
     final int listeningPort = rlpxAgent.start().join();
     final int discoveryPort =
@@ -264,6 +268,43 @@ public class DefaultP2PNetwork implements P2PNetwork {
     // Call checkMaintainedConnectionPeers() now that the local node is up, for immediate peer
     // additions
     checkMaintainedConnectionPeers();
+    if (config.getDiscovery().getDNSDiscoveryURL() != null) {
+      LOG.info("Starting DNS discovery with URL {}", config.getDiscovery().getDNSDiscoveryURL());
+      ethDnsExecutor =
+          new EthDNSIterator(config.getDiscovery().getDNSDiscoveryURL())
+              .forAll(
+                  (NodeRecord enr) -> {
+                    final Optional<InetSocketAddress> tcp = enr.getTcpAddress();
+                    final Optional<InetSocketAddress> udp = enr.getUdpAddress();
+                    if (tcp.isEmpty() && udp.isEmpty()) {
+                      return;
+                    }
+                    final InetSocketAddress host = tcp.orElseGet(udp::get);
+                    final Bytes compressedKey = (Bytes) enr.get(EnrField.PKEY_SECP256K1);
+                    //
+                    // SignatureAlgorithmType.DEFAULT_SIGNATURE_ALGORITHM_TYPE.get().
+                    final ECPoint decompressedPoint = curve.decodePoint(compressedKey.toArrayUnsafe());
+                    final EnodeURL enodeURL =
+                        EnodeURLImpl.builder()
+                            .ipAddress(host.getAddress())
+                            .nodeId(Bytes.wrap(decompressedPoint.getEncoded(false), 1, 64))
+                            .discoveryPort(udp.map(InetSocketAddress::getPort))
+                            .listeningPort(tcp.map(InetSocketAddress::getPort))
+                            .build();
+                    final DiscoveryPeer peer = DiscoveryPeer.fromEnode(enodeURL);
+                    dnsPeers.add(peer);
+                    rlpxAgent
+                        .connect(peer)
+                        .whenComplete(
+                            (p, t) -> {
+                              if (p != null) {
+                                System.out.println("Peer - " + p);
+//                              } else {
+//                                System.out.println(t.getMessage());
+                              }
+                            });
+                  });
+    }
 
     // Periodically check maintained connections
     final int checkMaintainedConnectionsSec = config.getCheckMaintainedConnectionsFrequencySec();
@@ -282,7 +323,9 @@ public class DefaultP2PNetwork implements P2PNetwork {
       return;
     }
 
-    getDnsDaemon().ifPresent(DNSDaemon::close);
+    if (ethDnsExecutor != null) {
+      ethDnsExecutor.shutdownNow();
+    }
 
     peerConnectionScheduler.shutdownNow();
     peerDiscoveryAgent.stop().whenComplete((res, err) -> shutdownLatch.countDown());
@@ -335,32 +378,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
     LOG.debug("Disconnect requested for peer {}.", peer);
     rlpxAgent.disconnect(peer.getId(), DisconnectReason.REQUESTED);
     return wasRemoved;
-  }
-
-  @VisibleForTesting
-  Optional<DNSDaemon> getDnsDaemon() {
-    return Optional.ofNullable(dnsDaemon);
-  }
-
-  @VisibleForTesting
-  DNSDaemonListener createDaemonListener() {
-    return (seq, records) -> {
-      final List<DiscoveryPeer> peers = new ArrayList<>();
-      for (final EthereumNodeRecord enr : records) {
-        final EnodeURL enodeURL =
-            EnodeURLImpl.builder()
-                .ipAddress(enr.ip())
-                .nodeId(enr.publicKey().bytes())
-                .discoveryPort(Optional.ofNullable(enr.udp()))
-                .listeningPort(Optional.ofNullable(enr.tcp()))
-                .build();
-        final DiscoveryPeer peer = DiscoveryPeer.fromEnode(enodeURL);
-        peers.add(peer);
-      }
-      if (!peers.isEmpty()) {
-        peers.stream().forEach(peerDiscoveryAgent::bond);
-      }
-    };
   }
 
   @VisibleForTesting
@@ -542,8 +559,8 @@ public class DefaultP2PNetwork implements P2PNetwork {
           peerPermissions,
           natService,
           maintainedPeers,
-          reputationManager,
-          vertx);
+          reputationManager
+      );
     }
 
     private void validate() {
