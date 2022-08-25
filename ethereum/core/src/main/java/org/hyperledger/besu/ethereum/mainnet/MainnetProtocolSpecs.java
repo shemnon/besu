@@ -35,6 +35,7 @@ import org.hyperledger.besu.ethereum.privacy.PrivateTransactionProcessor;
 import org.hyperledger.besu.ethereum.privacy.PrivateTransactionValidator;
 import org.hyperledger.besu.ethereum.privacy.storage.PrivateMetadataUpdater;
 import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
+import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.MainnetEVMs;
 import org.hyperledger.besu.evm.account.MutableAccount;
 import org.hyperledger.besu.evm.contractvalidation.MaxCodeSizeRule;
@@ -108,7 +109,7 @@ public abstract class MainnetProtocolSpecs {
     return new ProtocolSpecBuilder()
         .gasCalculator(FrontierGasCalculator::new)
         .gasLimitCalculator(new FrontierTargetingGasLimitCalculator())
-        .evmBuilder(MainnetEVMs::frontier)
+        .evmBuilder(new EVM.Builder().operationsSupplier(MainnetEVMs::frontierOperations))
         .precompileContractRegistryBuilder(MainnetPrecompiledContractRegistries::frontier)
         .messageCallProcessorBuilder(MessageCallProcessor::new)
         .contractCreationProcessorBuilder(
@@ -217,7 +218,7 @@ public abstract class MainnetProtocolSpecs {
             quorumCompatibilityMode,
             evmConfiguration)
         .gasCalculator(HomesteadGasCalculator::new)
-        .evmBuilder(MainnetEVMs::homestead)
+        .evmBuilder(new EVM.Builder().operationsSupplier(MainnetEVMs::homesteadOperations))
         .contractCreationProcessorBuilder(
             (gasCalculator, evm) ->
                 new ContractCreationProcessor(
@@ -347,7 +348,8 @@ public abstract class MainnetProtocolSpecs {
             quorumCompatibilityMode,
             evmConfiguration)
         .gasCalculator(ByzantiumGasCalculator::new)
-        .evmBuilder(MainnetEVMs::byzantium)
+        .evmBuilder(
+            new EVM.Builder().chainId(chainId).operationsSupplier(MainnetEVMs::byzantiumOperations))
         .precompileContractRegistryBuilder(MainnetPrecompiledContractRegistries::byzantium)
         .difficultyCalculator(MainnetDifficultyCalculators.BYZANTIUM)
         .transactionReceiptFactory(
@@ -389,7 +391,10 @@ public abstract class MainnetProtocolSpecs {
             evmConfiguration)
         .difficultyCalculator(MainnetDifficultyCalculators.CONSTANTINOPLE)
         .gasCalculator(ConstantinopleGasCalculator::new)
-        .evmBuilder(MainnetEVMs::constantinople)
+        .evmBuilder(
+            new EVM.Builder()
+                .chainId(chainId)
+                .operationsSupplier(MainnetEVMs::constantinopleOperations))
         .blockReward(CONSTANTINOPLE_BLOCK_REWARD)
         .name("Constantinople");
   }
@@ -430,9 +435,7 @@ public abstract class MainnetProtocolSpecs {
             evmConfiguration)
         .gasCalculator(IstanbulGasCalculator::new)
         .evmBuilder(
-            (gasCalculator, jdCacheConfig) ->
-                MainnetEVMs.istanbul(
-                    gasCalculator, chainId.orElse(BigInteger.ZERO), evmConfiguration))
+            new EVM.Builder().chainId(chainId).operationsSupplier(MainnetEVMs::istanbulOperations))
         .precompileContractRegistryBuilder(MainnetPrecompiledContractRegistries::istanbul)
         .contractCreationProcessorBuilder(
             (gasCalculator, evm) ->
@@ -555,9 +558,7 @@ public abstract class MainnetProtocolSpecs {
                     1,
                     SPURIOUS_DRAGON_FORCE_DELETE_WHEN_EMPTY_ADDRESSES))
         .evmBuilder(
-            (gasCalculator, jdCacheConfig) ->
-                MainnetEVMs.london(
-                    gasCalculator, chainId.orElse(BigInteger.ZERO), evmConfiguration))
+            new EVM.Builder().chainId(chainId).operationsSupplier(MainnetEVMs::londonOperations))
         .feeMarket(londonFeeMarket)
         .difficultyCalculator(MainnetDifficultyCalculators.LONDON)
         .blockHeaderValidatorBuilder(
@@ -627,8 +628,7 @@ public abstract class MainnetProtocolSpecs {
             quorumCompatibilityMode,
             evmConfiguration)
         .evmBuilder(
-            (gasCalculator, jdCacheConfig) ->
-                MainnetEVMs.paris(gasCalculator, chainId.orElse(BigInteger.ZERO), evmConfiguration))
+            new EVM.Builder().chainId(chainId).operationsSupplier(MainnetEVMs::parisOperations))
         .name("ParisFork");
   }
 

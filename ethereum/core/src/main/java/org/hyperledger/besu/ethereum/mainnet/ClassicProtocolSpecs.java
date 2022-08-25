@@ -22,6 +22,7 @@ import org.hyperledger.besu.ethereum.core.TransactionReceipt;
 import org.hyperledger.besu.ethereum.core.feemarket.CoinbaseFeePriceCalculator;
 import org.hyperledger.besu.ethereum.mainnet.feemarket.FeeMarket;
 import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
+import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.MainnetEVMs;
 import org.hyperledger.besu.evm.contractvalidation.MaxCodeSizeRule;
 import org.hyperledger.besu.evm.contractvalidation.PrefixCodeRule;
@@ -167,7 +168,8 @@ public class ClassicProtocolSpecs {
             ecip1017EraRounds,
             quorumCompatibilityMode,
             evmConfiguration)
-        .evmBuilder(MainnetEVMs::byzantium)
+        .evmBuilder(
+            new EVM.Builder().chainId(chainId).operationsSupplier(MainnetEVMs::byzantiumOperations))
         .evmConfiguration(evmConfiguration)
         .gasCalculator(SpuriousDragonGasCalculator::new)
         .skipZeroBlockRewards(true)
@@ -219,9 +221,11 @@ public class ClassicProtocolSpecs {
             ecip1017EraRounds,
             quorumCompatibilityMode,
             evmConfiguration)
-        .evmBuilder(MainnetEVMs::constantinople)
         .gasCalculator(PetersburgGasCalculator::new)
-        .evmBuilder(MainnetEVMs::constantinople)
+        .evmBuilder(
+            new EVM.Builder()
+                .chainId(chainId)
+                .operationsSupplier(MainnetEVMs::constantinopleOperations))
         .precompileContractRegistryBuilder(MainnetPrecompiledContractRegistries::istanbul)
         .name("Agharta");
   }
@@ -244,9 +248,7 @@ public class ClassicProtocolSpecs {
             evmConfiguration)
         .gasCalculator(IstanbulGasCalculator::new)
         .evmBuilder(
-            (gasCalculator, evmConfig) ->
-                MainnetEVMs.istanbul(
-                    gasCalculator, chainId.orElse(BigInteger.ZERO), evmConfiguration))
+            new EVM.Builder().chainId(chainId).operationsSupplier(MainnetEVMs::istanbulOperations))
         .precompileContractRegistryBuilder(MainnetPrecompiledContractRegistries::istanbul)
         .name("Phoenix");
   }

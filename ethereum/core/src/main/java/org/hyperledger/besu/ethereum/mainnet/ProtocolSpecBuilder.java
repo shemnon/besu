@@ -53,7 +53,7 @@ public class ProtocolSpecBuilder {
   private AbstractBlockProcessor.TransactionReceiptFactory transactionReceiptFactory;
   private DifficultyCalculator difficultyCalculator;
   private EvmConfiguration evmConfiguration;
-  private BiFunction<GasCalculator, EvmConfiguration, EVM> evmBuilder;
+  private EVM.Builder evmBuilder;
   private Function<GasCalculator, MainnetTransactionValidator> transactionValidatorBuilder;
   private Function<FeeMarket, BlockHeaderValidator.Builder> blockHeaderValidatorBuilder;
   private Function<FeeMarket, BlockHeaderValidator.Builder> ommerHeaderValidatorBuilder;
@@ -112,8 +112,7 @@ public class ProtocolSpecBuilder {
     return this;
   }
 
-  public ProtocolSpecBuilder evmBuilder(
-      final BiFunction<GasCalculator, EvmConfiguration, EVM> evmBuilder) {
+  public ProtocolSpecBuilder evmBuilder(final EVM.Builder evmBuilder) {
     this.evmBuilder = evmBuilder;
     return this;
   }
@@ -272,7 +271,11 @@ public class ProtocolSpecBuilder {
     checkNotNull(badBlockManager, "Missing bad blocks manager");
 
     final GasCalculator gasCalculator = gasCalculatorBuilder.get();
-    final EVM evm = evmBuilder.apply(gasCalculator, evmConfiguration);
+    final EVM evm =
+        evmBuilder
+            .gasCalculator(gasCalculator)
+            .jumpDestCacheWeightBytes(evmConfiguration.getJumpDestCacheWeightBytes())
+            .build();
     final PrecompiledContractConfiguration precompiledContractConfiguration =
         new PrecompiledContractConfiguration(gasCalculator, privacyParameters);
     final MainnetTransactionValidator transactionValidator =

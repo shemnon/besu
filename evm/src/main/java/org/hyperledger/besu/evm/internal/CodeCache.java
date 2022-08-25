@@ -30,7 +30,7 @@ public class CodeCache {
     this(config.getJumpDestCacheWeightBytes());
   }
 
-  private CodeCache(final long maxWeightBytes) {
+  public CodeCache(final long maxWeightBytes) {
     this.weightLimit = maxWeightBytes;
     this.cache =
         Caffeine.newBuilder().maximumWeight(maxWeightBytes).weigher(new CodeScale()).build();

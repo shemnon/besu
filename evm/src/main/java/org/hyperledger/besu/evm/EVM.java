@@ -31,38 +31,66 @@ import org.hyperledger.besu.evm.operation.StopOperation;
 import org.hyperledger.besu.evm.operation.VirtualOperation;
 import org.hyperledger.besu.evm.tracing.OperationTracer;
 
+import java.math.BigInteger;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.function.BiFunction;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.tuweni.bytes.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class EVM {
-  private static final Logger LOG = LoggerFactory.getLogger(EVM.class);
-
   protected static final OperationResult OVERFLOW_RESPONSE =
       new OperationResult(
           OptionalLong.of(0L), Optional.of(ExceptionalHaltReason.TOO_MANY_STACK_ITEMS));
   protected static final OperationResult UNDERFLOW_RESPONSE =
       new OperationResult(
           OptionalLong.of(0L), Optional.of(ExceptionalHaltReason.INSUFFICIENT_STACK_ITEMS));
-
+  private static final Logger LOG = LoggerFactory.getLogger(EVM.class);
   private final OperationRegistry operations;
   private final GasCalculator gasCalculator;
   private final Operation endOfScriptStop;
   private final CodeCache codeCache;
 
+  /** @deprecated Use EVMBuilder */
+  @Deprecated(since = "22.10.0", forRemoval = true)
   public EVM(
       final OperationRegistry operations,
       final GasCalculator gasCalculator,
       final EvmConfiguration evmConfiguration) {
+    this(operations, gasCalculator, evmConfiguration.getJumpDestCacheWeightBytes());
+  }
+
+  EVM(
+      final OperationRegistry operations,
+      final GasCalculator gasCalculator,
+      final long jumpDestCacheWeightBytes) {
     this.operations = operations;
     this.gasCalculator = gasCalculator;
     this.endOfScriptStop = new VirtualOperation(new StopOperation(gasCalculator));
-    this.codeCache = new CodeCache(evmConfiguration);
+    this.codeCache = new CodeCache(jumpDestCacheWeightBytes);
+  }
+
+  private static void logState(final MessageFrame frame, final long currentGasCost) {
+    if (LOG.isTraceEnabled()) {
+      final StringBuilder builder = new StringBuilder();
+      builder.append("Depth: ").append(frame.getMessageStackDepth()).append("\n");
+      builder.append("Operation: ").append(frame.getCurrentOperation().getName()).append("\n");
+      builder.append("PC: ").append(frame.getPC()).append("\n");
+      builder.append("Gas cost: ").append(currentGasCost).append("\n");
+      builder.append("Gas Remaining: ").append(frame.getRemainingGas()).append("\n");
+      builder.append("Depth: ").append(frame.getMessageStackDepth()).append("\n");
+      builder.append("Stack:");
+      for (int i = 0; i < frame.stackSize(); ++i) {
+        builder.append("\n\t").append(i).append(" ").append(frame.getStackItem(i));
+      }
+      LOG.trace(builder.toString());
+    }
   }
 
   public GasCalculator getGasCalculator() {
@@ -109,23 +137,6 @@ public class EVM {
         });
   }
 
-  private static void logState(final MessageFrame frame, final long currentGasCost) {
-    if (LOG.isTraceEnabled()) {
-      final StringBuilder builder = new StringBuilder();
-      builder.append("Depth: ").append(frame.getMessageStackDepth()).append("\n");
-      builder.append("Operation: ").append(frame.getCurrentOperation().getName()).append("\n");
-      builder.append("PC: ").append(frame.getPC()).append("\n");
-      builder.append("Gas cost: ").append(currentGasCost).append("\n");
-      builder.append("Gas Remaining: ").append(frame.getRemainingGas()).append("\n");
-      builder.append("Depth: ").append(frame.getMessageStackDepth()).append("\n");
-      builder.append("Stack:");
-      for (int i = 0; i < frame.stackSize(); ++i) {
-        builder.append("\n\t").append(i).append(" ").append(frame.getStackItem(i));
-      }
-      LOG.trace(builder.toString());
-    }
-  }
-
   @VisibleForTesting
   public Operation operationAtOffset(final Code code, final int offset) {
     final Bytes bytecode = code.getBytes();
@@ -146,5 +157,45 @@ public class EVM {
       codeCache.put(codeHash, result);
     }
     return result;
+  }
+
+  public static class Builder {
+
+    BiFunction<GasCalculator, Optional<BigInteger>, List<Operation>> operationsSupplier;
+    GasCalculator gasCalculator;
+    Optional<BigInteger> chainId = Optional.empty();
+    long jumpDestCacheWeightBytes = 32_000L;
+
+    public Builder() {}
+
+    public EVM build() {
+      Preconditions.checkNotNull(gasCalculator, "GasCalculator must be set before building");
+      final OperationRegistry operations = new OperationRegistry();
+      for (final var op : operationsSupplier.apply(gasCalculator, chainId)) {
+        operations.put(op);
+      }
+      return new EVM(operations, gasCalculator, jumpDestCacheWeightBytes);
+    }
+
+    public Builder operationsSupplier(
+        final BiFunction<GasCalculator, Optional<BigInteger>, List<Operation>> operationsSupplier) {
+      this.operationsSupplier = operationsSupplier;
+      return this;
+    }
+
+    public Builder gasCalculator(final GasCalculator gasCalculator) {
+      this.gasCalculator = gasCalculator;
+      return this;
+    }
+
+    public Builder jumpDestCacheWeightBytes(final long jumpDestCacheWeightBytes) {
+      this.jumpDestCacheWeightBytes = jumpDestCacheWeightBytes;
+      return this;
+    }
+
+    public Builder chainId(final Optional<BigInteger> chainId) {
+      this.chainId = chainId;
+      return this;
+    }
   }
 }

@@ -23,6 +23,7 @@ import org.hyperledger.besu.ethereum.mainnet.ProtocolScheduleBuilder;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpecAdapters;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpecBuilder;
 import org.hyperledger.besu.ethereum.mainnet.feemarket.FeeMarket;
+import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.MainnetEVMs;
 import org.hyperledger.besu.evm.internal.EvmConfiguration;
 
@@ -63,9 +64,7 @@ public class MergeProtocolSchedule {
 
     return specBuilder
         .evmBuilder(
-            (gasCalculator, jdCacheConfig) ->
-                MainnetEVMs.paris(
-                    gasCalculator, chainId.orElse(BigInteger.ZERO), EvmConfiguration.DEFAULT))
+            new EVM.Builder().chainId(chainId).operationsSupplier(MainnetEVMs::parisOperations))
         .blockProcessorBuilder(MergeBlockProcessor::new)
         .blockHeaderValidatorBuilder(MergeProtocolSchedule::getBlockHeaderValidator)
         .blockReward(Wei.ZERO)

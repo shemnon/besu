@@ -16,6 +16,7 @@
 package org.hyperledger.besu.evm.internal;
 
 public class EvmConfiguration {
+
   public static final EvmConfiguration DEFAULT = new EvmConfiguration(32_000L);
   private final long jumpDestCacheWeightKB;
 

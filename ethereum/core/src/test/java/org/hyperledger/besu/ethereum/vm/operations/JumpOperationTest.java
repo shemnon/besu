@@ -33,12 +33,12 @@ import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.IstanbulGasCalculator;
-import org.hyperledger.besu.evm.internal.EvmConfiguration;
 import org.hyperledger.besu.evm.operation.JumpDestOperation;
 import org.hyperledger.besu.evm.operation.JumpOperation;
 import org.hyperledger.besu.evm.operation.Operation.OperationResult;
-import org.hyperledger.besu.evm.operation.OperationRegistry;
 import org.hyperledger.besu.evm.worldstate.WorldUpdater;
+
+import java.util.List;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
@@ -82,10 +82,13 @@ public class JumpOperationTest {
     worldStateUpdater.getOrCreate(address).getMutable().setBalance(Wei.of(1));
     worldStateUpdater.commit();
 
-    final OperationRegistry registry = new OperationRegistry();
-    registry.put(new JumpOperation(gasCalculator));
-    registry.put(new JumpDestOperation(gasCalculator));
-    evm = new EVM(registry, gasCalculator, EvmConfiguration.DEFAULT);
+    evm =
+        new EVM.Builder()
+            .operationsSupplier(
+                (gasCalculator, chainId) ->
+                    List.of(new JumpOperation(gasCalculator), new JumpDestOperation(gasCalculator)))
+            .gasCalculator(gasCalculator)
+            .build();
   }
 
   @Test
