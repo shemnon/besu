@@ -559,6 +559,33 @@ public class GenesisConfigFileTest {
         .isEqualTo(JsonUtil.getJson(genesisNode.get("config"), true));
   }
 
+  @Test
+  public void shouldGetOnlyGoodEIPs() {
+    final GenesisConfigFile config =
+        fromConfig(
+            "{"
+                + " \"config\": {"
+                + "    \"eips\": [\n"
+                + "      615,\n"
+                + "      999,\n"
+                + "      1057,\n"
+                + "      \"good values above, bad values below\",\n"
+                + "      1.5,\n"
+                + "      {\n"
+                + "        \"number\": 1,\n"
+                + "        \"links\": false\n"
+                + "      },\n"
+                + "      true,\n"
+                + "      [1559,2930],\n"
+                + "      9000000000\n"
+                + "    ]\n"
+                + "  }"
+                + "}");
+
+    final var eips = config.getConfigOptions().getEips();
+    assertThat(eips).containsOnly(615, 999, 1057);
+  }
+
   private GenesisConfigFile configWithProperty(final String key, final String value) {
     return fromConfig("{\"" + key + "\":\"" + value + "\"}");
   }

@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -48,6 +49,8 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
   private static final String DISCOVERY_CONFIG_KEY = "discovery";
   private static final String CHECKPOINT_CONFIG_KEY = "checkpoint";
   private static final String ZERO_BASE_FEE_KEY = "zerobasefee";
+
+  private static final String EIPS_CONFIG_KEY = "eips";
 
   private final ObjectNode configRoot;
   private final Map<String, String> configOverrides = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -195,6 +198,11 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
     return JsonUtil.getObjectNode(configRoot, KECCAK256_CONFIG_KEY)
         .map(Keccak256ConfigOptions::new)
         .orElse(Keccak256ConfigOptions.DEFAULT);
+  }
+
+  @Override
+  public Set<Integer> getEips() {
+    return JsonUtil.getIntSet(configRoot, EIPS_CONFIG_KEY);
   }
 
   @Override

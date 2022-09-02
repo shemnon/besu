@@ -24,12 +24,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.Set;
+import java.util.TreeSet;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.tuweni.units.bigints.UInt256;
 
 public class StubGenesisConfigOptions implements GenesisConfigOptions {
 
+  private final Set<Integer> eips = new TreeSet<>();
   private OptionalLong homesteadBlockNumber = OptionalLong.empty();
   private OptionalLong daoForkBlock = OptionalLong.empty();
   private OptionalLong tangerineWhistleBlockNumber = OptionalLong.empty();
@@ -144,6 +147,11 @@ public class StubGenesisConfigOptions implements GenesisConfigOptions {
   @Override
   public Keccak256ConfigOptions getKeccak256ConfigOptions() {
     return Keccak256ConfigOptions.DEFAULT;
+  }
+
+  @Override
+  public Set<Integer> getEips() {
+    return eips;
   }
 
   @Override
@@ -415,6 +423,13 @@ public class StubGenesisConfigOptions implements GenesisConfigOptions {
   @Override
   public List<Long> getForks() {
     return Collections.emptyList();
+  }
+
+  public StubGenesisConfigOptions eips(final int... eipsToAdd) {
+    for (final var eip : eipsToAdd) {
+      eips.add(eip);
+    }
+    return this;
   }
 
   public StubGenesisConfigOptions homesteadBlock(final long blockNumber) {

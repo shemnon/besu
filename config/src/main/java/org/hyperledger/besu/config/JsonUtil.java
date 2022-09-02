@@ -22,6 +22,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -173,6 +176,18 @@ public class JsonUtil {
       throw new IllegalArgumentException(
           "Invalid property value, " + key + " should be a positive integer: " + value);
     }
+  }
+
+  public static Set<Integer> getIntSet(final ObjectNode json, final String key) {
+    return getValue(json, key)
+        .filter(jsonNode -> validateType(jsonNode, JsonNodeType.ARRAY))
+        .map(
+            a ->
+                StreamSupport.stream(a.spliterator(), false)
+                    .filter(JsonNode::isInt)
+                    .map(JsonNode::asInt)
+                    .collect(Collectors.toSet()))
+        .orElse(Set.of());
   }
 
   public static OptionalLong getLong(final ObjectNode json, final String key) {

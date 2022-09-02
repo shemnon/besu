@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.Set;
 
 import org.apache.tuweni.units.bigints.UInt256;
 
@@ -61,6 +62,8 @@ public interface GenesisConfigOptions {
   EthashConfigOptions getEthashConfigOptions();
 
   Keccak256ConfigOptions getKeccak256ConfigOptions();
+
+  Set<Integer> getEips();
 
   OptionalLong getHomesteadBlockNumber();
 
