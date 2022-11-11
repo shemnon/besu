@@ -1,0 +1,45 @@
+[
+  {
+    "name": "com.github.benmanes.caffeine.cache.PSMW",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.PSW",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.PSWMS",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.SSLA",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.SSLMSW",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.SSMSW",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.SSMW",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.bouncycastle.jcajce.provider.digest.Keccak$Mappings",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "org.bouncycastle.jcajce.provider.digest.Keccak$Digest256",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "org.bouncycastle.jcajce.provider.digest.Keccak",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  }
+]

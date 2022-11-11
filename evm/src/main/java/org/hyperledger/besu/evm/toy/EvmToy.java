@@ -15,6 +15,10 @@
  */
 package org.hyperledger.besu.evm.toy;
 
+import java.security.Provider;
+import java.security.Security;
+
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import picocli.CommandLine;
 
 public final class EvmToy {
@@ -22,6 +26,12 @@ public final class EvmToy {
   private static final int ERROR_EXIT_CODE = 1;
 
   public static void main(final String... args) {
+    if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+      Security.addProvider(new BouncyCastleProvider());
+    }
+    Provider bcProvider = Security.getProvider(BouncyCastleProvider.PROVIDER_NAME);
+    Security.removeProvider("BC");
+    Security.insertProviderAt(bcProvider, 1);
 
     final EvmToyCommand evmToolCommand = new EvmToyCommand();
 

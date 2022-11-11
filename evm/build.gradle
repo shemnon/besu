@@ -14,8 +14,13 @@
  *
  */
 
+plugins {
+  id 'org.graalvm.buildtools.native' version '0.9.17'
+}
+
 apply plugin: 'java-library'
 apply plugin: 'idea'
+apply plugin: 'application'
 
 jar {
   archiveBaseName = 'besu-evm'
@@ -36,16 +41,18 @@ dependencies {
   implementation project(':crypto')
   implementation project(':datatypes')
   implementation project(':ethereum:rlp')
-  implementation 'com.google.guava:guava'
 
   compileOnly 'com.fasterxml.jackson.core:jackson-databind'
 
+  implementation 'com.github.ben-manes.caffeine:caffeine'
+  implementation 'com.google.guava:guava'
+  implementation 'info.picocli:picocli'
   implementation 'org.apache.tuweni:tuweni-bytes'
   implementation 'org.hyperledger.besu:bls12-381'
   implementation 'net.java.dev.jna:jna'
-  implementation 'com.github.ben-manes.caffeine:caffeine'
 
-  testImplementation 'info.picocli:picocli'
+  annotationProcessor 'info.picocli:picocli-codegen'
+
   testImplementation 'junit:junit'
   testImplementation 'org.assertj:assertj-core'
   testImplementation 'org.junit.jupiter:junit-jupiter'
@@ -62,6 +69,20 @@ publishing {
         name = 'Besu EVM'
         description = 'EVM Engine component'
       }
+    }
+  }
+}
+
+application {
+  mainClass = 'org.hyperledger.besu.evm.toy.EvmToy'
+}
+
+graalvmNative {
+  binaries {
+    main {
+      sharedLibrary = false
+//        configurationFileDirectories.from(file('src/main/graal'))
+      buildArgs.add('-H:ReflectionConfigurationFiles=/Users/dannoferrin/git/github.com/shemnon/besu/evm/src/main/graal/reflection-config.json')
     }
   }
 }

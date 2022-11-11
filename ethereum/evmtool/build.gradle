@@ -14,6 +14,10 @@
  *
  */
 
+plugins {
+  id 'org.graalvm.buildtools.native' version '0.9.17'
+}
+
 apply plugin: 'java-library'
 apply plugin: 'application'
 apply plugin: 'idea'
@@ -59,6 +63,7 @@ dependencies {
   implementation 'org.apache.logging.log4j:log4j-core'
 
   annotationProcessor 'com.google.dagger:dagger-compiler'
+  annotationProcessor 'info.picocli:picocli-codegen'
 
   testImplementation 'junit:junit'
   testImplementation 'org.assertj:assertj-core'
@@ -66,6 +71,10 @@ dependencies {
   testImplementation 'org.mockito:mockito-core'
 
   testRuntimeOnly 'org.junit.vintage:junit-vintage-engine'
+
+  // Enable sjf4j in graalvm
+  runtimeOnly('org.slf4j:log4j-over-slf4j')
+  runtimeOnly("ch.qos.logback:logback-classic")
 }
 
 mainClassName = 'org.hyperledger.besu.evmtool.EvmTool'
@@ -139,4 +148,17 @@ task dockerUpload(type: Exec) {
   additionalTags.each { tag -> cmd += " && docker tag '${image}' '${imageName}:${tag.trim()}' && docker push '${imageName}:${tag.trim()}'" }
   executable "sh"
   args "-c", cmd
+}
+
+graalvmNative {
+  binaries {
+    main {
+      sharedLibrary = false
+      buildArgs.add([
+              '-H:ReflectionConfigurationFiles=src/main/graal/reflection-config.json',
+              '-H:+TraceSecurityServices'
+              ]
+      )
+    }
+  }
 }
