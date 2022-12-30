@@ -54,7 +54,7 @@ public class ForkIdsNetworkConfigTest {
     public void testFromRaw() {
       final ForkId forkId = new ForkId(Bytes.ofUnsignedInt(0xfe3366e7L), 1735371L);
       final List<List<Bytes>> forkIdAsBytesList = List.of(forkId.getForkIdAsBytesList());
-      assertThat(ForkId.fromRawForkId(forkIdAsBytesList).get()).isEqualTo(forkId);
+      assertThat(ForkId.fromRawForkId(forkIdAsBytesList)).contains(forkId);
     }
   }
 
@@ -113,12 +113,6 @@ public class ForkIdsNetworkConfigTest {
                 new ForkId(Bytes.ofUnsignedInt(0x757a1c47L), 5062605L),
                 new ForkId(Bytes.ofUnsignedInt(0xb8c6299dL), 0L),
                 new ForkId(Bytes.ofUnsignedInt(0xb8c6299dL), 0L))
-          },
-          new Object[] {
-            NetworkName.SHANDONG,
-            List.of(
-                new ForkId(Bytes.ofUnsignedInt(0x0459e09dL), 0L),
-                new ForkId(Bytes.ofUnsignedInt(0x0459e09dL), 0L))
           },
           new Object[] {
             NetworkName.MAINNET,

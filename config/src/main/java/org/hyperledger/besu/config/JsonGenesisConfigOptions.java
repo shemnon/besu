@@ -289,8 +289,13 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
   }
 
   @Override
-  public OptionalLong getShandongBlockNumber() {
-    return getOptionalLong("shandongblock");
+  public OptionalLong getFutureBlockNumber() {
+    return getOptionalLong("futureblock");
+  }
+
+  @Override
+  public OptionalLong getExperimentalBlockNumber() {
+    return getOptionalLong("experimentalblock");
   }
 
   @Override
@@ -445,7 +450,8 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
     getMergeNetSplitBlockNumber().ifPresent(l -> builder.put("mergeNetSplitBlock", l));
     getShanghaiTime().ifPresent(l -> builder.put("shanghaiTime", l));
     getCancunTime().ifPresent(l -> builder.put("cancunTime", l));
-    getShandongBlockNumber().ifPresent(l -> builder.put("shandongBlock", l));
+    getFutureBlockNumber().ifPresent(l -> builder.put("futureBlock", l));
+    getExperimentalBlockNumber().ifPresent(l -> builder.put("experimentalBlock", l));
     getTerminalBlockNumber().ifPresent(l -> builder.put("terminalBlockNumber", l));
     getTerminalBlockHash().ifPresent(h -> builder.put("terminalBlockHash", h.toHexString()));
 
@@ -569,7 +575,9 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
             getArrowGlacierBlockNumber(),
             getGrayGlacierBlockNumber(),
             getMergeNetSplitBlockNumber(),
-            getShandongBlockNumber(),
+            getShanghaiTime(),
+            getFutureBlockNumber(),
+            getExperimentalBlockNumber(),
             getEcip1015BlockNumber(),
             getDieHardBlockNumber(),
             getGothamBlockNumber(),

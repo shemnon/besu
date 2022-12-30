@@ -26,10 +26,11 @@ public enum EvmSpecVersion {
   ISTANBUL(0, true),
   LONDON(0, true),
   PARIS(0, true),
-  SHANGHAI(1, false),
-
-  /** Transient fork, will be removed */
-  SHANDONG(1, false);
+  SHANGHAI(0, true),
+  /** For EIPs approved for mainnet, but not yet slotted for a fork */
+  FUTURE(1, false),
+  /** For EIPs not yet approved for mainnet, but with an implementation in Besu */
+  EXPERIMENTAL(1, false);
 
   private static final Logger LOGGER = LoggerFactory.getLogger(EvmSpecVersion.class);
 

@@ -94,7 +94,9 @@ public interface GenesisConfigOptions {
 
   OptionalLong getCancunTime();
 
-  OptionalLong getShandongBlockNumber();
+  OptionalLong getFutureBlockNumber();
+
+  OptionalLong getExperimentalBlockNumber();
 
   Optional<Wei> getBaseFeePerGas();
 

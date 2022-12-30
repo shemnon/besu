@@ -40,7 +40,6 @@ class NetworkDeprecationMessageTest {
         "MAINNET",
         "SEPOLIA",
         "GOERLI",
-        "SHANDONG",
         "DEV",
         "CLASSIC",
         "KOTTI",
