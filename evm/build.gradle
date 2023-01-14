@@ -46,6 +46,7 @@ dependencies {
   implementation 'net.java.dev.jna:jna'
   implementation 'com.github.ben-manes.caffeine:caffeine'
 
+  testImplementation 'com.fasterxml.jackson.core:jackson-databind'
   testImplementation 'info.picocli:picocli'
   testImplementation 'junit:junit'
   testImplementation 'org.assertj:assertj-core'

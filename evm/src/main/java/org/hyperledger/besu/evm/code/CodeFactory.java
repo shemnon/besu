@@ -43,7 +43,7 @@ public final class CodeFactory {
           return new CodeV0(bytes, codeHash);
         }
         if (codeSize < 3) {
-          return new CodeInvalid(codeHash, bytes, "EOF Container too short");
+          return new CodeInvalid(codeHash, bytes, "EOFContainerError: EOF Container too short");
         }
         if (bytes.get(1) != 0) {
           if (inCreateOperation) {
@@ -55,7 +55,8 @@ public final class CodeFactory {
         }
         int version = bytes.get(2);
         if (version != 1) {
-          return new CodeInvalid(codeHash, bytes, "Unsupported EOF Version: " + version);
+          return new CodeInvalid(
+              codeHash, bytes, "EOFContainerError: Unsupported EOF Version: " + version);
         }
 
         final EOFLayout layout = EOFLayout.parseEOF(bytes);

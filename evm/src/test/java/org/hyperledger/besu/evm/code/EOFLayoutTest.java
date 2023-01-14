@@ -313,10 +313,10 @@ public class EOFLayoutTest {
     final EOFLayout layout = EOFLayout.parseEOF(container);
 
     assertThat(layout.getVersion()).isEqualTo(expectedVersion);
-    assertThat(layout.getInvalidReason()).isEqualTo(failureReason);
     assertThat(layout.getContainer()).isEqualTo(container);
     if (layout.getInvalidReason() != null) {
       assertThat(layout.isValid()).isFalse();
+      assertThat(layout.getInvalidReason()).contains(failureReason);
       assertThat(layout.getCodeSectionCount()).isZero();
     } else {
       assertThat(layout.isValid()).isTrue();

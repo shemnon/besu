@@ -595,7 +595,7 @@ public final class CodeV1Validation {
       attribute = OPCODE_ATTRIBUTES[operationNum];
       if ((attribute & INVALID) == INVALID) {
         // undefined instruction
-        return String.format("Invalid Instruction 0x%02x", operationNum);
+        return String.format("EOFCodeValidationError: Invalid Instruction 0x%02x", operationNum);
       }
       pos += 1;
       int pcPostInstruction = pos;
@@ -605,42 +605,43 @@ public final class CodeV1Validation {
       } else if (operationNum == RelativeJumpOperation.OPCODE
           || operationNum == RelativeJumpIfOperation.OPCODE) {
         if (pos + 2 > size) {
-          return "Truncated relative jump offset";
+          return "EOFJumpValidationError: Truncated relative jump offset";
         }
         pcPostInstruction += 2;
         final int offset = readBigEndianI16(pos, rawCode);
         final int rjumpdest = pcPostInstruction + offset;
         if (rjumpdest < 0 || rjumpdest >= size) {
-          return "Relative jump destination out of bounds";
+          return "EOFJumpValidationError: Relative jump destination out of bounds";
         }
         rjumpdests.set(rjumpdest);
       } else if (operationNum == RelativeJumpVectorOperation.OPCODE) {
         if (pos + 1 > size) {
-          return "Truncated jump table";
+          return "EOFJumpValidationError: Truncated jump table";
         }
         final int jumpTableSize = RelativeJumpVectorOperation.getVectorSize(code, pos);
         if (jumpTableSize == 0) {
-          return "Empty jump table";
+          return "EOFJumpValidationError: Empty jump table";
         }
         pcPostInstruction += 1 + 2 * jumpTableSize;
         if (pcPostInstruction > size) {
-          return "Truncated jump table";
+          return "EOFJumpValidationError: Truncated jump table";
         }
         for (int offsetPos = pos + 1; offsetPos < pcPostInstruction; offsetPos += 2) {
           final int offset = readBigEndianI16(offsetPos, rawCode);
           final int rjumpdest = pcPostInstruction + offset;
           if (rjumpdest < 0 || rjumpdest >= size) {
-            return "Relative jump destination out of bounds";
+            return "EOFJumpValidationError: Relative jump destination out of bounds";
           }
           rjumpdests.set(rjumpdest);
         }
       } else if (operationNum == CallFOperation.OPCODE) {
         if (pos + 2 > size) {
-          return "Truncated CALLF";
+          return "EOFFunctionValidationError: Truncated CALLF";
         }
         int section = readBigEndianU16(pos, rawCode);
         if (section >= sectionCount) {
-          return "CALLF to non-existent section - " + Integer.toHexString(section);
+          return "EOFFunctionValidationError: CALLF to non-existent section - "
+              + Integer.toHexString(section);
         }
         pcPostInstruction += 2;
       }
@@ -648,10 +649,10 @@ public final class CodeV1Validation {
       pos = pcPostInstruction;
     }
     if ((attribute & TERMINAL) != TERMINAL) {
-      return "No terminating instruction";
+      return "EOFCodeValidationError: No terminating instruction";
     }
     if (rjumpdests.intersects(immediates)) {
-      return "Relative jump destinations targets invalid immediate data";
+      return "EOFJumpValidationError: Relative jump destinations targets invalid immediate data";
     }
     return null;
   }
@@ -702,7 +703,7 @@ public final class CodeV1Validation {
           // we've been here, validate the jump is what is expected
           if (stackHeights[currentPC] != currentStackHeight) {
             return String.format(
-                "Jump into code stack height (%d) does not match previous value (%d)",
+                "EOFStackValidationError: Jump into code stack height (%d) does not match previous value (%d)",
                 stackHeights[currentPC], currentStackHeight);
           } else {
             thisWork++;
@@ -730,13 +731,13 @@ public final class CodeV1Validation {
 
           if (stackInputs > currentStackHeight) {
             return String.format(
-                "Operation 0x%02X requires stack of %d but only has %d items",
+                "EOFStackValidationError: Operation 0x%02X requires stack of %d but only has %d items",
                 thisOp, stackInputs, currentStackHeight);
           }
 
           currentStackHeight = currentStackHeight - stackInputs + stackOutputs;
           if (currentStackHeight > MAX_STACK_HEIGHT) {
-            return "Stack height exceeds 1024";
+            return "EOFStackValidationError: Stack height exceeds 1024";
           }
 
           maxStackHeight = Math.max(maxStackHeight, currentStackHeight);
@@ -760,7 +761,7 @@ public final class CodeV1Validation {
             int returnStackItems = toValidate.getOutputs();
             if (currentStackHeight != returnStackItems) {
               return String.format(
-                  "Section return (RETF) calculated height 0x%x does not match configured height 0x%x",
+                  "EOFFunctionValidationError: Section return (RETF) calculated height 0x%x does not match configured height 0x%x",
                   currentStackHeight, returnStackItems);
             }
           }
@@ -768,7 +769,7 @@ public final class CodeV1Validation {
             unusedBytes += pcAdvance;
             break;
           } else if (pcAdvance == 0) {
-            return String.format("Invalid Instruction 0x%02x", thisOp);
+            return String.format("EOFCodeValidationError: Invalid Instruction 0x%02x", thisOp);
           }
 
           currentPC += pcAdvance;
@@ -780,11 +781,12 @@ public final class CodeV1Validation {
       }
       if (maxStackHeight != toValidate.maxStackHeight) {
         return String.format(
-            "Calculated max stack height (%d) does not match reported stack height (%d)",
+            "EOFStackValidationError: Calculated max stack height (%d) does not match reported stack height (%d)",
             maxStackHeight, toValidate.maxStackHeight);
       }
       if (unusedBytes != 0) {
-        return String.format("Dead code detected in section %d", codeSectionToValidate);
+        return String.format(
+            "EOFStackValidationError: Dead code detected in section %d", codeSectionToValidate);
       }
 
       return null;

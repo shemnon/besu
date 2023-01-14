@@ -148,7 +148,7 @@ class CodeV1Test {
   @MethodSource("invalidCodeArguments")
   void testInvalidCode(final String code) {
     final String validationError = validateCode(Bytes.fromHexString(code), 1);
-    assertThat(validationError).startsWith("Invalid Instruction 0x");
+    assertThat(validationError).startsWith("EOFCodeValidationError: Invalid Instruction 0x");
   }
 
   private static Stream<Arguments> invalidCodeArguments() {
@@ -173,7 +173,7 @@ class CodeV1Test {
   @MethodSource("pushTruncatedImmediateArguments")
   void testPushTruncatedImmediate(final String code) {
     final String validationError = validateCode(Bytes.fromHexString(code), 1);
-    assertThat(validationError).isEqualTo("No terminating instruction");
+    assertThat(validationError).isEqualTo("EOFCodeValidationError: No terminating instruction");
   }
 
   private static Stream<Arguments> pushTruncatedImmediateArguments() {
@@ -188,14 +188,14 @@ class CodeV1Test {
   @ValueSource(strings = {"5c", "5c00"})
   void testRjumpTruncatedImmediate(final String code) {
     final String validationError = validateCode(Bytes.fromHexString(code), 1);
-    assertThat(validationError).isEqualTo("Truncated relative jump offset");
+    assertThat(validationError).isEqualTo("EOFJumpValidationError: Truncated relative jump offset");
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"60015d", "60015d00"})
   void testRjumpiTruncatedImmediate(final String code) {
     final String validationError = validateCode(Bytes.fromHexString(code), 1);
-    assertThat(validationError).isEqualTo("Truncated relative jump offset");
+    assertThat(validationError).isEqualTo("EOFJumpValidationError: Truncated relative jump offset");
   }
 
   @ParameterizedTest
@@ -210,7 +210,7 @@ class CodeV1Test {
       })
   void testRjumpvTruncatedImmediate(final String code) {
     final String validationError = validateCode(Bytes.fromHexString(code), 1);
-    assertThat(validationError).isEqualTo("Truncated jump table");
+    assertThat(validationError).isEqualTo("EOFJumpValidationError: Truncated jump table");
   }
 
   @ParameterizedTest
@@ -227,7 +227,8 @@ class CodeV1Test {
       })
   void testRjumpsOutOfBounds(final String code) {
     final String validationError = validateCode(Bytes.fromHexString(code), 1);
-    assertThat(validationError).isEqualTo("Relative jump destination out of bounds");
+    assertThat(validationError)
+        .isEqualTo("EOFJumpValidationError: Relative jump destination out of bounds");
   }
 
   @ParameterizedTest
@@ -280,7 +281,8 @@ class CodeV1Test {
   void testRjumpsIntoImmediate(final String code) {
     final String validationError = validateCode(Bytes.fromHexString(code), 1);
     assertThat(validationError)
-        .isEqualTo("Relative jump destinations targets invalid immediate data");
+        .isEqualTo(
+            "EOFJumpValidationError: Relative jump destinations targets invalid immediate data");
   }
 
   private static Stream<Arguments> rjumpsIntoImmediateExtraArguments() {
@@ -321,14 +323,14 @@ class CodeV1Test {
   @ValueSource(strings = {"60015e0000"})
   void testRjumpvEmptyTable(final String code) {
     final String validationError = validateCode(Bytes.fromHexString(code), 1);
-    assertThat(validationError).isEqualTo("Empty jump table");
+    assertThat(validationError).isEqualTo("EOFJumpValidationError: Empty jump table");
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"b0", "b000"})
   void testCallFTruncated(final String code) {
     final String validationError = validateCode(Bytes.fromHexString(code), 1);
-    assertThat(validationError).isEqualTo("Truncated CALLF");
+    assertThat(validationError).isEqualTo("EOFFunctionValidationError: Truncated CALLF");
   }
 
   @ParameterizedTest
@@ -336,14 +338,15 @@ class CodeV1Test {
   @Disabled("Out of Shahghai, will likely return in Cancun or Prague")
   void testJumpCallFTruncated(final String code) {
     final String validationError = validateCode(Bytes.fromHexString(code), 1);
-    assertThat(validationError).isEqualTo("Truncated CALLF");
+    assertThat(validationError).isEqualTo("EOFFunctionValidationError: Truncated CALLF");
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"b00004", "b003ff", "b0ffff"})
   void testCallFWrongSection(final String code) {
     final String validationError = validateCode(Bytes.fromHexString(code), 3);
-    assertThat(validationError).startsWith("CALLF to non-existent section -");
+    assertThat(validationError)
+        .startsWith("EOFFunctionValidationError: CALLF to non-existent section -");
   }
 
   @ParameterizedTest
@@ -449,7 +452,12 @@ class CodeV1Test {
 
     EOFLayout eofLayout = EOFLayout.parseEOF(Bytes.fromHexString(sb));
 
-    assertThat(validateStack(sectionToTest, eofLayout)).isEqualTo(expectedError);
+    String actual = validateStack(sectionToTest, eofLayout);
+    if (expectedError == null) {
+      assertThat(actual).isNull();
+    } else {
+      assertThat(actual).contains(expectedError);
+    }
   }
 
   /**

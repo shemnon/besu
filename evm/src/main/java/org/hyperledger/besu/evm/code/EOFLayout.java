@@ -56,10 +56,10 @@ public class EOFLayout {
   private static String readKind(final ByteArrayInputStream inputStream, final int expectedKind) {
     int kind = inputStream.read();
     if (kind == -1) {
-      return "Improper section headers";
+      return "EOFContainerError: Improper section headers";
     }
     if (kind != expectedKind) {
-      return "Expected kind " + expectedKind + " but read kind " + kind;
+      return "EOFContainerError: Expected kind " + expectedKind + " but read kind " + kind;
     }
     return null;
   }
@@ -68,18 +68,19 @@ public class EOFLayout {
     final ByteArrayInputStream inputStream = new ByteArrayInputStream(container.toArrayUnsafe());
 
     if (inputStream.available() < 3) {
-      return invalidLayout(container, -1, "EOF Container too small");
+      return invalidLayout(container, -1, "EOFContainerError: EOF Container too small");
     }
     if (inputStream.read() != 0xEF) {
-      return invalidLayout(container, -1, "EOF header byte 0 incorrect");
+      return invalidLayout(container, -1, "EOFContainerError: EOF header byte 0 incorrect");
     }
     if (inputStream.read() != 0x0) {
-      return invalidLayout(container, -1, "EOF header byte 1 incorrect");
+      return invalidLayout(container, -1, "EOFContainerError: EOF header byte 1 incorrect");
     }
 
     final int version = inputStream.read();
     if (version > MAX_SUPPORTED_VERSION || version < 1) {
-      return invalidLayout(container, version, "Unsupported EOF Version " + version);
+      return invalidLayout(
+          container, version, "EOFContainerError: Unsupported EOF Version " + version);
     }
 
     String error = readKind(inputStream, SECTION_TYPES);
@@ -88,7 +89,7 @@ public class EOFLayout {
     }
     int typesLength = readUnsignedShort(inputStream);
     if (typesLength <= 0) {
-      return invalidLayout(container, version, "Invalid Types section size");
+      return invalidLayout(container, version, "EOFContainerError: Invalid Types section size");
     }
 
     error = readKind(inputStream, SECTION_CODE);
@@ -97,13 +98,13 @@ public class EOFLayout {
     }
     int codeSectionCount = readUnsignedShort(inputStream);
     if (codeSectionCount <= 0) {
-      return invalidLayout(container, version, "Invalid Code section count");
+      return invalidLayout(container, version, "EOFContainerError: Invalid Code section count");
     }
     if (codeSectionCount * 4 != typesLength) {
       return invalidLayout(
           container,
           version,
-          "Type section length incompatible with code section count - 0x"
+          "EOFContainerError: Type section length incompatible with code section count - 0x"
               + Integer.toHexString(codeSectionCount)
               + " * 4 != 0x"
               + Integer.toHexString(typesLength));
@@ -112,13 +113,14 @@ public class EOFLayout {
       return invalidLayout(
           container,
           version,
-          "Too many code sections - 0x" + Integer.toHexString(codeSectionCount));
+          "EOFContainerError: Too many code sections - 0x" + Integer.toHexString(codeSectionCount));
     }
     int[] codeSectionSizes = new int[codeSectionCount];
     for (int i = 0; i < codeSectionCount; i++) {
       int size = readUnsignedShort(inputStream);
       if (size <= 0) {
-        return invalidLayout(container, version, "Invalid Code section size for section " + i);
+        return invalidLayout(
+            container, version, "EOFContainerError: Invalid Code section size for section " + i);
       }
       codeSectionSizes[i] = size;
     }
@@ -129,7 +131,7 @@ public class EOFLayout {
     }
     int dataSize = readUnsignedShort(inputStream);
     if (dataSize < 0) {
-      return invalidLayout(container, version, "Invalid Data section size");
+      return invalidLayout(container, version, "EOFContainerError: Invalid Data section size");
     }
 
     error = readKind(inputStream, SECTION_TERMINATOR);
@@ -144,11 +146,13 @@ public class EOFLayout {
       typeData[i][2] = readUnsignedShort(inputStream);
     }
     if (typeData[codeSectionCount - 1][2] == -1) {
-      return invalidLayout(container, version, "Incomplete type section");
+      return invalidLayout(container, version, "EOFContainerError: Incomplete type section");
     }
     if (typeData[0][0] != 0 || typeData[0][1] != 0) {
       return invalidLayout(
-          container, version, "Code section does not have zero inputs and outputs");
+          container,
+          version,
+          "EOFContainerError: Code section does not have zero inputs and outputs");
     }
     CodeSection[] codeSections = new CodeSection[codeSectionCount];
     int pos = // calculate pos in stream...
@@ -162,25 +166,28 @@ public class EOFLayout {
     for (int i = 0; i < codeSectionCount; i++) {
       int codeSectionSize = codeSectionSizes[i];
       if (inputStream.skip(codeSectionSize) != codeSectionSize) {
-        return invalidLayout(container, version, "Incomplete code section " + i);
+        return invalidLayout(container, version, "EOFContainerError: Incomplete code section " + i);
       }
       if (typeData[i][0] > 0x7f) {
         return invalidLayout(
             container,
             version,
-            "Type data input stack too large - 0x" + Integer.toHexString(typeData[i][0]));
+            "EOFContainerError: Type data input stack too large - 0x"
+                + Integer.toHexString(typeData[i][0]));
       }
       if (typeData[i][1] > 0x7f) {
         return invalidLayout(
             container,
             version,
-            "Type data output stack too large - 0x" + Integer.toHexString(typeData[i][1]));
+            "EOFContainerError: Type data output stack too large - 0x"
+                + Integer.toHexString(typeData[i][1]));
       }
       if (typeData[i][2] > 0x3ff) {
         return invalidLayout(
             container,
             version,
-            "Type data max stack too large - 0x" + Integer.toHexString(typeData[i][2]));
+            "EOFContainerError: Type data max stack too large - 0x"
+                + Integer.toHexString(typeData[i][2]));
       }
       codeSections[i] =
           new CodeSection(codeSectionSize, typeData[i][0], typeData[i][1], typeData[i][2], pos);
@@ -188,10 +195,11 @@ public class EOFLayout {
     }
 
     if (inputStream.skip(dataSize) != dataSize) {
-      return invalidLayout(container, version, "Incomplete data section");
+      return invalidLayout(container, version, "EOFContainerError: Incomplete data section");
     }
     if (inputStream.read() != -1) {
-      return invalidLayout(container, version, "Dangling data after end of all sections");
+      return invalidLayout(
+          container, version, "EOFContainerError: Dangling data after end of all sections");
     }
 
     return new EOFLayout(container, version, codeSections);
