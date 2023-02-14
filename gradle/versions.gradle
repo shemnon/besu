@@ -21,6 +21,8 @@ dependencyManagement {
       entry 'antlr4-runtime'
     }
 
+    dependency 'ch.qos.logback:logback-classic:1.4.4'
+
     dependencySet(group:'com.fasterxml.jackson.core', version:'2.14.1') {
       entry 'jackson-databind'
       entry 'jackson-datatype'
@@ -63,6 +65,7 @@ dependencyManagement {
     dependency 'dnsjava:dnsjava:3.5.1'
 
     dependency 'info.picocli:picocli:4.6.3'
+    dependency 'info.picocli:picocli-codegen:4.6.3'
 
     dependencySet(group: 'io.grpc', version: '1.47.0') {
       entry 'grpc-all'
@@ -71,7 +74,10 @@ dependencyManagement {
       entry 'grpc-stub'
     }
 
-    dependency 'io.kubernetes:client-java:17.0.0'
+    dependency('io.kubernetes:client-java:17.0.0') {
+//      exclude(group: 'org.bouncycastle', name:'bcpkix-jdk18on')
+    }
+
 
     dependency 'io.netty:netty-all:4.1.78.Final'
     dependency 'io.netty:netty-tcnative-boringssl-static:2.0.50.Final'
@@ -146,9 +152,9 @@ dependencyManagement {
 
     dependency 'org.awaitility:awaitility:4.2.0'
 
-    dependencySet(group: 'org.bouncycastle', version: '1.70') {
-      entry'bcpkix-jdk15on'
-      entry'bcprov-jdk15on'
+    dependencySet(group: 'org.bouncycastle', version: '1.72') {
+      entry'bcpkix-jdk18on'
+      entry'bcprov-jdk18on'
     }
 
     dependency 'org.fusesource.jansi:jansi:2.4.0'
@@ -193,6 +199,8 @@ dependencyManagement {
     dependency 'org.rocksdb:rocksdbjni:7.7.3'
 
     dependency 'org.slf4j:slf4j-api:1.7.36'
+    dependency 'org.slf4j:log4j-over-slf4j:1.7.36'
+    dependency 'org.slf4j:slf4j-jdk14:1.7.36'
 
     dependency 'org.springframework.security:spring-security-crypto:5.7.2'
 
@@ -205,12 +213,17 @@ dependencyManagement {
       entry 'core'
       entry 'crypto'
     }
+    dependency('org.web3j:utils:4.9.4') {
+      exclude(group:'org.bouncycastle', name:'bcprov-jdk15on')
+    }
 
     dependency 'org.xerial.snappy:snappy-java:1.1.8.4'
 
     dependency 'org.yaml:snakeyaml:1.32'
 
-    dependency 'tech.pegasys.discovery:discovery:22.2.0'
+    dependency('tech.pegasys.discovery:discovery:22.2.0') {
+      exclude(group:'org.bouncycastle', name:'bcprov-jdk15on')
+    }
 
     dependency 'com.github.oshi:oshi-core:6.2.2'
   }

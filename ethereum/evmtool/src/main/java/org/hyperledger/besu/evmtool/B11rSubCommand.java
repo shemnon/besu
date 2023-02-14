@@ -151,8 +151,9 @@ public class B11rSubCommand implements Runnable {
       }
 
       if (!header.equals(stdinPath)) {
-        config.set(
-            "header", t8nReader.readTree(new FileReader(header.toFile(), StandardCharsets.UTF_8)));
+        try (FileReader reader = new FileReader(header.toFile(), StandardCharsets.UTF_8)) {
+          config.set("header", t8nReader.readTree(reader));
+        }
       }
       if (!txs.equals(stdinPath)) {
         try (FileReader reader = new FileReader(txs.toFile(), StandardCharsets.UTF_8)) {
@@ -237,9 +238,11 @@ public class B11rSubCommand implements Runnable {
 
   private ReferenceTestBlockHeader readHeader(final JsonNode jsonObject) {
     ObjectNode objectNode = (ObjectNode) jsonObject;
-    maybeMoveField(objectNode, "logsBloom", "bloom");
     maybeMoveField(objectNode, "sha3Uncles", "uncleHash");
     maybeMoveField(objectNode, "miner", "coinbase");
+    maybeMoveField(objectNode, "transactionsRoot", "transactionsTrie");
+    maybeMoveField(objectNode, "receiptsRoot", "receiptTrie");
+    maybeMoveField(objectNode, "logsBloom", "bloom");
     return objectMapper.convertValue(jsonObject, ReferenceTestBlockHeader.class);
   }
 }

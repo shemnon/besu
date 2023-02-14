@@ -20,7 +20,6 @@ import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 public final class EvmTool {
 
   public static void main(final String... args) {
-    SignatureAlgorithmFactory.setDefaultInstance();
 
     final EvmToolCommand evmToolCommand = new EvmToolCommand();
 

@@ -26,7 +26,7 @@ import org.apache.logging.slf4j.Log4jLoggerFactory;
 import org.slf4j.LoggerFactory;
 
 /** The Log4j2 configurator util. */
-public class Log4j2ConfiguratorUtil {
+class Log4j2ConfiguratorUtil {
 
   private Log4j2ConfiguratorUtil() {}
 
@@ -36,7 +36,7 @@ public class Log4j2ConfiguratorUtil {
    * @param parentLogger the parent logger
    * @param level the level
    */
-  public static void setAllLevels(final String parentLogger, final Level level) {
+  static void setAllLevels(final String parentLogger, final Level level) {
     // 1) get logger config
     // 2) if exact match, use it, if not, create it.
     // 3) set level on logger config
@@ -60,7 +60,7 @@ public class Log4j2ConfiguratorUtil {
    *
    * @param loggerName the logger name
    */
-  public static void setLevelDebug(final String loggerName) {
+  static void setLevelDebug(final String loggerName) {
     setLevel(loggerName, Level.DEBUG);
   }
 
@@ -70,7 +70,7 @@ public class Log4j2ConfiguratorUtil {
    * @param loggerName the logger name
    * @param level the level
    */
-  public static void setLevel(final String loggerName, final Level level) {
+  static void setLevel(final String loggerName, final Level level) {
     final LoggerContext loggerContext = getLoggerContext();
     if (Strings.isEmpty(loggerName)) {
       setRootLevel(loggerContext, level);
@@ -111,7 +111,7 @@ public class Log4j2ConfiguratorUtil {
   }
 
   /** Reconfigure. */
-  public static void reconfigure() {
+  static void reconfigure() {
     getLoggerContext().reconfigure();
   }
 
@@ -122,7 +122,7 @@ public class Log4j2ConfiguratorUtil {
   }
 
   /** Shutdown. */
-  public static void shutdown() {
+  static void shutdown() {
     getLoggerContext().terminate();
   }
 }

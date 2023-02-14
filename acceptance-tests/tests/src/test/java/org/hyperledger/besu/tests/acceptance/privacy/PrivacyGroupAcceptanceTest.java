@@ -24,7 +24,8 @@ import org.hyperledger.besu.tests.acceptance.dsl.privacy.PrivacyAcceptanceTestBa
 import org.hyperledger.besu.tests.acceptance.dsl.privacy.PrivacyNode;
 import org.hyperledger.besu.tests.acceptance.dsl.privacy.account.PrivacyAccountResolver;
 import org.hyperledger.besu.tests.web3j.generated.EventEmitter;
-import org.hyperledger.besu.util.Log4j2ConfiguratorUtil;
+import org.hyperledger.besu.util.LogConfigurator;
+
 import org.hyperledger.enclave.testutil.EnclaveEncryptorType;
 import org.hyperledger.enclave.testutil.EnclaveType;
 
@@ -99,7 +100,7 @@ public class PrivacyGroupAcceptanceTest extends PrivacyAcceptanceTestBase {
 
   @Test
   public void nodeCanCreatePrivacyGroup() {
-    Log4j2ConfiguratorUtil.setLevel("", Level.DEBUG);
+    LogConfigurator.setLevel("", "DEBUG");
     final String privacyGroupId =
         alice.execute(
             privacyTransactions.createPrivacyGroup(

@@ -16,7 +16,7 @@ package org.hyperledger.besu.ethereum.p2p.rlpx.framing;
 
 import static io.netty.buffer.ByteBufUtil.hexDump;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
-import static org.bouncycastle.pqc.math.linearalgebra.ByteUtils.xor;
+import static org.bouncycastle.pqc.legacy.math.linearalgebra.ByteUtils.xor;
 import static org.hyperledger.besu.ethereum.p2p.rlpx.RlpxFrameConstants.LENGTH_FRAME_SIZE;
 import static org.hyperledger.besu.ethereum.p2p.rlpx.RlpxFrameConstants.LENGTH_MAX_MESSAGE_FRAME;
 

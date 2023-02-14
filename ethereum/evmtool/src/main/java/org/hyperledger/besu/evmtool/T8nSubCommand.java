@@ -58,7 +58,6 @@ import org.hyperledger.besu.evm.tracing.StandardJsonTracer;
 import org.hyperledger.besu.evm.worldstate.WorldUpdater;
 import org.hyperledger.besu.evmtool.exception.UnsupportedForkException;
 import org.hyperledger.besu.plugin.data.TransactionType;
-import org.hyperledger.besu.util.Log4j2ConfiguratorUtil;
 
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -88,7 +87,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Stopwatch;
-import org.apache.logging.log4j.Level;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
@@ -249,13 +247,9 @@ public class T8nSubCommand implements Runnable {
       return;
     }
 
-    Log4j2ConfiguratorUtil.setLevel(
-        "org.hyperledger.besu.ethereum.mainnet.AbstractProtocolScheduleBuilder", Level.OFF);
     final ReferenceTestProtocolSchedules referenceTestProtocolSchedules =
         ReferenceTestProtocolSchedules.create(
             new StubGenesisConfigOptions().chainId(BigInteger.valueOf(chainId)));
-    Log4j2ConfiguratorUtil.setLevel(
-        "org.hyperledger.besu.ethereum.mainnet.AbstractProtocolScheduleBuilder", null);
 
     final MutableWorldState worldState = new DefaultMutableWorldState(initialWorldState);
 
@@ -279,7 +273,6 @@ public class T8nSubCommand implements Runnable {
     long gasUsed = 0;
     for (int i = 0; i < transactions.size(); i++) {
       Transaction transaction = transactions.get(i);
-
       MainnetTransactionValidator transactionValidator = protocolSpec.getTransactionValidator();
       ValidationResult<TransactionInvalidReason> txValidation =
           transactionValidator.validate(
@@ -340,6 +333,7 @@ public class T8nSubCommand implements Runnable {
                 TransactionValidationParams.processingBlock(),
                 tracer);
       } catch (IOException e) {
+        e.printStackTrace();
         throw new RuntimeException(e);
       }
       timer.stop();
@@ -354,6 +348,8 @@ public class T8nSubCommand implements Runnable {
         }
       }
       long transactionGasUsed = transaction.getGasLimit() - result.getGasRemaining();
+
+      // todo result has valid/invalid, remove local hand-jamming
 
       gasUsed += transactionGasUsed;
       long intrinsicGas =
