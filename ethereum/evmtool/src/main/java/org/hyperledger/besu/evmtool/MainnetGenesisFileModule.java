@@ -47,9 +47,7 @@ class MainnetGenesisFileModule extends GenesisFileModule {
 
   @Override
   HeaderBasedProtocolSchedule provideProtocolSchedule(
-      final GenesisConfigOptions configOptions,
-      @Named("Fork") final Optional<String> fork,
-      @Named("RevertReasonEnabled") final boolean revertReasonEnabled) {
+      final GenesisConfigOptions configOptions, @Named("Fork") final Optional<String> fork) {
     if (fork.isPresent()) {
       var schedules = createSchedules();
       var schedule = schedules.get(fork.map(String::toLowerCase).get());
