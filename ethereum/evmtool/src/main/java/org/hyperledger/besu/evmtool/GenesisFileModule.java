@@ -41,10 +41,6 @@ public class GenesisFileModule {
 
   private final String genesisConfig;
 
-  protected GenesisFileModule(final File genesisFile) throws IOException {
-    this.genesisConfig = Files.readString(genesisFile.toPath(), Charset.defaultCharset());
-  }
-
   protected GenesisFileModule(final String genesisConfig) {
     this.genesisConfig = genesisConfig;
   }
