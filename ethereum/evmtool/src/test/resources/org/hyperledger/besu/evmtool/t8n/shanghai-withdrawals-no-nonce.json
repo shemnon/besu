@@ -51,7 +51,14 @@
         "1": "0x0275fc82fe832100726ec7c26078ffb1c1dbff14a3b52d93dc359768fc8c7baa"
       },
       "ommers": [],
-      "withdrawals": [],
+      "withdrawals": [
+        {
+          "index": "0x0",
+          "validatorIndex": "0x0",
+          "address": "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
+          "amount": "0x5209"
+        }
+      ],
       "parentUncleHash": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
       "currentBaseFee": "7"
     }
@@ -62,13 +69,13 @@
         "balance": "0x1319718811c8"
       },
       "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b": {
-        "nonce": "0x1",
-        "balance": "0x3b9aca00"
+        "balance": "0x1319e8bfe400",
+        "nonce": "0x1"
       }
     },
     "body": "0xf865f86380843b9aca00825208940000000000000000000000000000000000000100808026a0e319535da2cae2d72ddb352054535d000c23acdc7cad9d828891253f3850d0d2a032fe4444149b609e2ffa621e23e179b12028309fdb8cb0a5c1bbc58135299af1",
     "result": {
-      "stateRoot": "0xbe252b80c472518724f7b2aa7d688891f9b258d8f43f12b01e1ef5e3cb76bce9",
+      "stateRoot": "0x41855ebd4b425591ae60f57de6ec700c8a1128c7761b63371b09671b5f1abb3f",
       "txRoot": "0xb5ffe01eaa51ee8246b2108e049e6e11dc0a1d99b4cc52966791ef9c40b8b863",
       "receiptsRoot": "0x056b23fbba480696b65fe5a59b8f2148a1299103c4f57df839233af2cf4ca2d2",
       "logsHash": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
@@ -89,8 +96,8 @@
       ],
       "currentDifficulty": null,
       "gasUsed": "0x5208",
-      "currentBaseFee":"0x7",
-      "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
+      "currentBaseFee": "0x7",
+      "withdrawalsRoot": "0xa485a3bd07e29cb8234b5f093d5216eb8b965fb2693c66fea254f6cacef97a6f"
     }
   }
 }

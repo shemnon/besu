@@ -19,7 +19,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static picocli.CommandLine.ScopeType.INHERIT;
 
 import org.hyperledger.besu.cli.config.NetworkName;
-import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Wei;
@@ -29,9 +28,10 @@ import org.hyperledger.besu.ethereum.core.Difficulty;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.mainnet.MainnetBlockHeaderFunctions;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
-import org.hyperledger.besu.ethereum.vm.BlockHashLookup;
+import org.hyperledger.besu.ethereum.vm.CachingBlockHashLookup;
 import org.hyperledger.besu.evm.Code;
 import org.hyperledger.besu.evm.EVM;
+import org.hyperledger.besu.evm.account.AccountStorageEntry;
 import org.hyperledger.besu.evm.code.CodeInvalid;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.log.LogsBloomFilter;
@@ -40,6 +40,7 @@ import org.hyperledger.besu.evm.processor.MessageCallProcessor;
 import org.hyperledger.besu.evm.tracing.OperationTracer;
 import org.hyperledger.besu.evm.tracing.StandardJsonTracer;
 import org.hyperledger.besu.evm.worldstate.WorldState;
+import org.hyperledger.besu.evm.worldstate.WorldUpdater;
 import org.hyperledger.besu.util.LogConfigurator;
 
 import java.io.BufferedWriter;
@@ -53,6 +54,7 @@ import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.NavigableMap;
 import java.util.Optional;
 
 import com.google.common.base.Joiner;
@@ -150,21 +152,33 @@ public class EvmToolCommand implements Runnable {
 
   @Option(
       names = {"--memory", "--trace.memory"},
-      description = "Enable showing the full memory output in tracing for each op.",
-      scope = INHERIT)
+      description =
+          "Show the full memory output in tracing for each op. Default is not to show memory.",
+      scope = INHERIT,
+      negatable = true)
   final Boolean showMemory = false;
 
   @Option(
-      names = {"--trace.stack"},
-      description = "Enable showing the operand stack in tracing for each op.",
-      scope = INHERIT)
-  final Boolean showStack = true;
+      names = {"--trace.nostack"},
+      description = "Show the operand stack in tracing for each op. Default is to show stack.",
+      scope = INHERIT,
+      negatable = true)
+  final Boolean hideStack = false;
 
   @Option(
       names = {"--trace.returndata"},
-      description = "Enable showing the return data in tracing for each op.",
-      scope = INHERIT)
+      description =
+          "Show the return data in tracing for each op when present. Default is to show return data.",
+      scope = INHERIT,
+      negatable = true)
   final Boolean showReturnData = false;
+
+  @Option(
+      names = {"--notime"},
+      description = "Don't include time data in summary output.",
+      scope = INHERIT,
+      negatable = true)
+  final Boolean noTime = false;
 
   @Option(
       names = {"--prestate", "--genesis"},
@@ -189,9 +203,19 @@ public class EvmToolCommand implements Runnable {
 
   static final Joiner STORAGE_JOINER = Joiner.on(",\n");
   private final EvmToolCommandOptionsModule daggerOptions = new EvmToolCommandOptionsModule();
-  PrintWriter out =
-      new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out, UTF_8)), true);
-  InputStream in = new ByteArrayInputStream(new byte[0]);
+  PrintWriter out;
+  InputStream in;
+
+  public EvmToolCommand() {
+    this(
+        new ByteArrayInputStream(new byte[0]),
+        new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out, UTF_8)), true));
+  }
+
+  public EvmToolCommand(final InputStream in, final PrintWriter out) {
+    this.in = in;
+    this.out = out;
+  }
 
   void execute(final String... args) {
     execute(System.in, new PrintWriter(System.out, true, UTF_8), args);
@@ -201,6 +225,8 @@ public class EvmToolCommand implements Runnable {
     final CommandLine commandLine = new CommandLine(this).setOut(output);
     out = output;
     in = input;
+
+    // add dagger-injected options
     commandLine.addMixin("Dagger Options", daggerOptions);
 
     // add sub commands here
@@ -208,14 +234,24 @@ public class EvmToolCommand implements Runnable {
     commandLine.registerConverter(Bytes.class, Bytes::fromHexString);
     commandLine.registerConverter(Wei.class, arg -> Wei.of(Long.parseUnsignedLong(arg)));
 
-    commandLine.setExecutionStrategy(new CommandLine.RunLast()).execute(args);
+    // change negation regexp so --nomemory works.  See
+    // https://picocli.info/#_customizing_negatable_options
+    commandLine.setNegatableOptionTransformer(
+        new CommandLine.RegexTransformer.Builder()
+            .addPattern("^--no(\\w(-|\\w)*)$", "--$1", "--[no]$1")
+            .addPattern("^--trace.no(\\w(-|\\w)*)$", "--trace.$1", "--trace.[no]$1")
+            .addPattern("^--(\\w(-|\\w)*)$", "--no$1", "--[no]$1")
+            .addPattern("^--trace.(\\w(-|\\w)*)$", "--trace.no$1", "--trace.[no]$1")
+            .build());
+
+    commandLine.setExecutionStrategy(new CommandLine.RunLast());
+    commandLine.execute(args);
   }
 
   @Override
   public void run() {
     LogConfigurator.setLevel("", "OFF");
     try {
-      SignatureAlgorithmFactory.setDefaultInstance();
       final EvmToolComponent component =
           DaggerEvmToolComponent.builder()
               .dataStoreModule(new DataStoreModule())
@@ -290,10 +326,10 @@ public class EvmToolCommand implements Runnable {
 
         final OperationTracer tracer = // You should have picked Mercy.
             lastLoop && showJsonResults
-                ? new StandardJsonTracer(System.out, showMemory, showStack, showReturnData)
+                ? new StandardJsonTracer(out, showMemory, !hideStack, showReturnData)
                 : OperationTracer.NO_TRACING;
 
-        var updater = component.getWorldUpdater();
+        WorldUpdater updater = component.getWorldUpdater();
         updater.getOrCreate(sender);
         updater.getOrCreate(receiver);
 
@@ -317,7 +353,7 @@ public class EvmToolCommand implements Runnable {
                 .depth(0)
                 .completer(c -> {})
                 .miningBeneficiary(blockHeader.getCoinbase())
-                .blockHashLookup(new BlockHashLookup(blockHeader, component.getBlockchain()))
+                .blockHashLookup(new CachingBlockHashLookup(blockHeader, component.getBlockchain()))
                 .build());
 
         final MessageCallProcessor mcp = new MessageCallProcessor(evm, precompileContractRegistry);
@@ -342,14 +378,16 @@ public class EvmToolCommand implements Runnable {
 
           if (lastLoop && messageFrameStack.isEmpty()) {
             final long evmGas = txGas - messageFrame.getRemainingGas();
+            final JsonObject resultLine = new JsonObject();
+            resultLine.put("gasUser", "0x" + Long.toHexString(evmGas));
+            if (!noTime) {
+              resultLine.put("timens", lastTime).put("time", lastTime / 1000);
+            }
+            resultLine
+                .put("gasTotal", "0x" + Long.toHexString(evmGas))
+                .put("output", messageFrame.getOutputData().toHexString());
             out.println();
-            out.println(
-                new JsonObject()
-                    .put("gasUser", "0x" + Long.toHexString(evmGas))
-                    .put("timens", lastTime)
-                    .put("time", lastTime / 1000)
-                    .put("gasTotal", "0x" + Long.toHexString(evmGas))
-                    .put("output", messageFrame.getOutputData().toHexString()));
+            out.println(resultLine);
           }
         }
         lastTime = stopwatch.elapsed().toNanos();
@@ -378,7 +416,8 @@ public class EvmToolCommand implements Runnable {
               if (account.getCode() != null && account.getCode().size() > 0) {
                 out.println("  \"code\": \"" + account.getCode().toHexString() + "\",");
               }
-              var storageEntries = account.storageEntriesFrom(Bytes32.ZERO, Integer.MAX_VALUE);
+              NavigableMap<Bytes32, AccountStorageEntry> storageEntries =
+                  account.storageEntriesFrom(Bytes32.ZERO, Integer.MAX_VALUE);
               if (!storageEntries.isEmpty()) {
                 out.println("  \"storage\": {");
                 out.println(

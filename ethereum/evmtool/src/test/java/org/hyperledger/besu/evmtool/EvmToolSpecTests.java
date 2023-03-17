@@ -17,6 +17,7 @@ package org.hyperledger.besu.evmtool;
 import static com.google.common.base.Preconditions.checkState;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.IterableAssert.assertThatIterable;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -38,9 +39,12 @@ import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -49,12 +53,20 @@ public class EvmToolSpecTests {
   static final ObjectMapper objectMapper = new ObjectMapper();
   static final ObjectReader specReader = objectMapper.reader();
 
+  public static Object[][] b11rTests() {
+    return findSpecFiles(new String[] {"b11r"});
+  }
+
+  public static Object[][] stateTestTests() {
+    return findSpecFiles(new String[] {"state-test"});
+  }
+
   public static Object[][] t8nTests() {
     return findSpecFiles(new String[] {"t8n"});
   }
 
-  public static Object[][] b11rTests() {
-    return findSpecFiles(new String[] {"b11r"});
+  public static Object[][] traceTests() {
+    return findSpecFiles(new String[] {"trace"});
   }
 
   public static Object[][] findSpecFiles(
@@ -98,7 +110,7 @@ public class EvmToolSpecTests {
   }
 
   @ParameterizedTest(name = "{0}")
-  @MethodSource({"t8nTests", "b11rTests"})
+  @MethodSource({"b11rTests", "stateTestTests", "t8nTests", "traceTests"})
   void testBySpec(
       final String file,
       final JsonNode cliNode,
@@ -130,7 +142,27 @@ public class EvmToolSpecTests {
     evmTool.execute(inputStream, new PrintWriter(baos, true, UTF_8), cli);
 
     if (stdoutNode.isTextual()) {
-      assertThat(baos.toString(UTF_8)).isEqualTo(stdinNode.textValue());
+      assertThat(baos.toString(UTF_8)).isEqualTo(stdoutNode.textValue());
+    } else if (stdoutNode.isArray()) {
+      ArrayNode arrayNode = (ArrayNode) specReader.createArrayNode();
+      int pos = 0;
+      byte[] output = baos.toByteArray();
+      while (pos < output.length) {
+        int next = pos;
+        //noinspection StatementWithEmptyBody
+        while (output[next++] != ((byte) '\n')) {}
+        try {
+          JsonNode value = specReader.readTree(output, pos, next - pos);
+          if (JsonNodeType.MISSING != value.getNodeType()) {
+            arrayNode.add(value);
+          }
+        } catch (JsonParseException jpe) {
+          // Discard non-well-formed lines.
+          // If those are needed for validation use the text node option.
+        }
+        pos = next;
+      }
+      assertThatIterable(arrayNode::elements).containsExactlyElementsOf(stdoutNode::elements);
     } else {
       var actualNode = specReader.readTree(baos.toByteArray());
       assertThat(actualNode).isEqualTo(stdoutNode);

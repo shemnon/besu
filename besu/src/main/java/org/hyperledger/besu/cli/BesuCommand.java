@@ -150,6 +150,7 @@ import org.hyperledger.besu.ethereum.worldstate.WorldStatePreimageStorage;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateStorage;
 import org.hyperledger.besu.evm.precompile.AbstractAltBnPrecompiledContract;
 import org.hyperledger.besu.evm.precompile.BigIntegerModularExponentiationPrecompiledContract;
+import org.hyperledger.besu.evm.precompile.KZGPointEvalPrecompiledContract;
 import org.hyperledger.besu.metrics.BesuMetricCategory;
 import org.hyperledger.besu.metrics.MetricCategoryRegistryImpl;
 import org.hyperledger.besu.metrics.MetricsProtocol;
@@ -239,7 +240,6 @@ import net.consensys.quorum.mainnet.launcher.LauncherManager;
 import net.consensys.quorum.mainnet.launcher.config.ImmutableLauncherConfig;
 import net.consensys.quorum.mainnet.launcher.exception.LauncherException;
 import net.consensys.quorum.mainnet.launcher.util.ParseArgsHelper;
-import org.apache.logging.log4j.Level;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.slf4j.Logger;
@@ -541,6 +541,15 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
           "P2P network identifier. (default: the selected network chain ID or custom genesis chain ID)",
       arity = "1")
   private final BigInteger networkId = null;
+
+  @Option(
+      names = {"--kzg-trusted-setup"},
+      paramLabel = MANDATORY_FILE_FORMAT_HELP,
+      description =
+          "Path to file containing the KZG trusted setup, mandatory for custom networks that support data blobs, "
+              + "optional for overriding named networks default.",
+      arity = "1")
+  private final Path kzgTrustedSetupFile = null;
 
   @CommandLine.ArgGroup(validate = false, heading = "@|bold GraphQL Options|@%n")
   GraphQlOptionGroup graphQlOptionGroup = new GraphQlOptionGroup();
@@ -1303,7 +1312,7 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
       names = {"--rpc-max-logs-range"},
       description =
           "Specifies the maximum number of blocks to retrieve logs from via RPC. Must be >=0. 0 specifies no limit  (default: ${DEFAULT-VALUE})")
-  private final Long rpcMaxLogsRange = 1000L;
+  private final Long rpcMaxLogsRange = 5000L;
 
   @Mixin private P2PTLSConfigOptions p2pTLSConfigOptions;
 
@@ -1430,7 +1439,6 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
    * @param args arguments to Besu command
    * @return success or failure exit code.
    */
-  @VisibleForTesting
   public int parse(
       final IExecutionStrategy resultHandler,
       final BesuParameterExceptionHandler parameterExceptionHandler,
@@ -1543,7 +1551,6 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
   private void registerConverters() {
     commandLine.registerConverter(Address.class, Address::fromHexStringStrict);
     commandLine.registerConverter(Bytes.class, Bytes::fromHexString);
-    commandLine.registerConverter(Level.class, Level::valueOf);
     commandLine.registerConverter(MetricsProtocol.class, MetricsProtocol::fromString);
     commandLine.registerConverter(UInt256.class, (arg) -> UInt256.valueOf(new BigInteger(arg)));
     commandLine.registerConverter(Wei.class, (arg) -> Wei.of(Long.parseUnsignedLong(arg)));
@@ -1838,6 +1845,24 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
       Blake2bfMessageDigest.Blake2bfDigest.disableNative();
       logger.info("Using the Java implementation of the blake2bf algorithm");
     }
+
+    if (getActualGenesisConfigOptions().getCancunTime().isPresent()) {
+      // if custom genesis provided, then trusted setup file is mandatory
+      if (genesisFile != null && kzgTrustedSetupFile == null) {
+        throw new ParameterException(
+            this.commandLine,
+            "--kzg-trusted-setup is mandatory when providing a custom genesis that support data blobs");
+      }
+      if (kzgTrustedSetupFile != null) {
+        KZGPointEvalPrecompiledContract.init(kzgTrustedSetupFile);
+      } else {
+        KZGPointEvalPrecompiledContract.init(network.name());
+      }
+    } else if (kzgTrustedSetupFile != null) {
+      throw new ParameterException(
+          this.commandLine,
+          "--kzg-trusted-setup can only be specified on networks with data blobs enabled");
+    }
   }
 
   private void validateOptions() {
@@ -1890,6 +1915,13 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
             > MiningParameters.DEFAULT_POS_BLOCK_CREATION_MAX_TIME) {
       throw new ParameterException(
           this.commandLine, "--Xpos-block-creation-max-time must be positive and ≤ 12000");
+    }
+
+    if (unstableMiningOptions.getPosBlockCreationRepetitionMinDuration() <= 0
+        || unstableMiningOptions.getPosBlockCreationRepetitionMinDuration() > 2000) {
+      throw new ParameterException(
+          this.commandLine,
+          "--Xpos-block-creation-repetition-min-duration must be positive and ≤ 2000");
     }
   }
 
@@ -2271,6 +2303,8 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
                 .powJobTimeToLive(unstableMiningOptions.getPowJobTimeToLive())
                 .maxOmmerDepth(unstableMiningOptions.getMaxOmmersDepth())
                 .posBlockCreationMaxTime(unstableMiningOptions.getPosBlockCreationMaxTime())
+                .posBlockCreationRepetitionMinDuration(
+                    unstableMiningOptions.getPosBlockCreationRepetitionMinDuration())
                 .build())
         .transactionPoolConfiguration(buildTransactionPoolConfiguration())
         .nodeKey(new NodeKey(securityModule()))
@@ -3269,7 +3303,6 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
    *
    * @return instance of BesuParameterExceptionHandler
    */
-  @VisibleForTesting
   public BesuParameterExceptionHandler parameterExceptionHandler() {
     return new BesuParameterExceptionHandler(this::getLogLevel);
   }
@@ -3477,16 +3510,18 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
     isGoQuorumCompatibilityMode = true;
   }
 
+  private GenesisConfigOptions getActualGenesisConfigOptions() {
+    return Optional.ofNullable(genesisConfigOptions)
+        .orElseGet(
+            () ->
+                GenesisConfigFile.fromConfig(
+                        genesisConfig(Optional.ofNullable(network).orElse(MAINNET)))
+                    .getConfigOptions(genesisConfigOverrides));
+  }
+
   private void setMergeConfigOptions() {
     MergeConfigOptions.setMergeEnabled(
-        Optional.ofNullable(genesisConfigOptions)
-            .orElseGet(
-                () ->
-                    GenesisConfigFile.fromConfig(
-                            genesisConfig(Optional.ofNullable(network).orElse(MAINNET)))
-                        .getConfigOptions(genesisConfigOverrides))
-            .getTerminalTotalDifficulty()
-            .isPresent());
+        getActualGenesisConfigOptions().getTerminalTotalDifficulty().isPresent());
   }
 
   private void setIgnorableStorageSegments() {
@@ -3496,13 +3531,7 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
   }
 
   private void validatePostMergeCheckpointBlockRequirements() {
-    final GenesisConfigOptions genesisOptions =
-        Optional.ofNullable(genesisConfigOptions)
-            .orElseGet(
-                () ->
-                    GenesisConfigFile.fromConfig(
-                            genesisConfig(Optional.ofNullable(network).orElse(MAINNET)))
-                        .getConfigOptions(genesisConfigOverrides));
+    final GenesisConfigOptions genesisOptions = getActualGenesisConfigOptions();
     final SynchronizerConfiguration synchronizerConfiguration =
         unstableSynchronizerOptions.toDomainObject().build();
     final Optional<UInt256> terminalTotalDifficulty = genesisOptions.getTerminalTotalDifficulty();
@@ -3510,7 +3539,7 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
     if (synchronizerConfiguration.isCheckpointPostMergeEnabled()) {
       if (!checkpointConfigOptions.isValid()) {
         throw new InvalidConfigurationException(
-            "Near head checkpoint sync requires a checkpoint block configured in the genesis file");
+            "PoS checkpoint sync requires a checkpoint block configured in the genesis file");
       }
       terminalTotalDifficulty.ifPresentOrElse(
           ttd -> {
@@ -3519,18 +3548,18 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
                     .equals(UInt256.ZERO)
                 && ttd.equals(UInt256.ZERO)) {
               throw new InvalidConfigurationException(
-                  "Post Merge checkpoint sync can't be used with TTD = 0 and checkpoint totalDifficulty = 0");
+                  "PoS checkpoint sync can't be used with TTD = 0 and checkpoint totalDifficulty = 0");
             }
             if (UInt256.fromHexString(
                     genesisOptions.getCheckpointOptions().getTotalDifficulty().get())
-                .lessOrEqualThan(ttd)) {
+                .lessThan(ttd)) {
               throw new InvalidConfigurationException(
-                  "Near head checkpoint sync requires a block with total difficulty greater than the TTD");
+                  "PoS checkpoint sync requires a block with total difficulty greater or equal than the TTD");
             }
           },
           () -> {
             throw new InvalidConfigurationException(
-                "Near head checkpoint sync requires TTD in the genesis file");
+                "PoS checkpoint sync requires TTD in the genesis file");
           });
     }
   }

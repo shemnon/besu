@@ -61,7 +61,7 @@ public abstract class AbstractRetryingTest {
     } catch (final RuntimeException | AssertionError e) {
       if (!"trace".equalsIgnoreCase(originalRootLogLevel)
           || !"trace".equalsIgnoreCase(originalEvmLogLevel)) {
-        // try again, this time with more logging so we can capture more information.
+        // try again, this time with more logging, so we can capture more information.
         System.setProperty("root.log.level", "trace");
         System.setProperty("evm.log.level", "trace");
         resetLogging();

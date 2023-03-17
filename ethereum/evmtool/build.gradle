@@ -35,7 +35,6 @@ jar {
 }
 
 dependencies {
-  api 'org.slf4j:slf4j-api'
 
   implementation project(':besu')
   implementation project(':config')
@@ -56,7 +55,6 @@ dependencies {
   implementation 'com.google.guava:guava'
   implementation 'info.picocli:picocli'
   implementation 'io.vertx:vertx-core'
-  implementation 'org.apache.logging.log4j:log4j-core'
 
   annotationProcessor 'com.google.dagger:dagger-compiler'
   annotationProcessor 'info.picocli:picocli-codegen'
@@ -68,8 +66,8 @@ dependencies {
 
   testRuntimeOnly 'org.junit.vintage:junit-vintage-engine'
 
-  // Only use java.util.logging in EvmTool
-  runtimeOnly('org.slf4j:slf4j-jdk14')
+  // no logging for evmtool
+  runtimeOnly('org.slf4j:slf4j-nop')
 }
 
 mainClassName = 'org.hyperledger.besu.evmtool.EvmTool'
@@ -158,7 +156,7 @@ graalvmNative {
         "-H:ReflectionConfigurationFiles=${projectDir}/src/main/graal/reflection-config.json",
         "-H:AdditionalSecurityProviders=org.bouncycastle.jce.provider.BouncyCastleProvider",
         '-H:+TraceSecurityServices'
-                    )
+        )
 
 
       // Excludes configuration that matches one of given regexes from JAR of dependency with said coordinates.

@@ -142,6 +142,15 @@ public class BlockchainQueries {
   }
 
   /**
+   * Return the header of the head of the chain.
+   *
+   * @return The header of the head of the chain.
+   */
+  public BlockHeader headBlockHeader() {
+    return blockchain.getChainHeadHeader();
+  }
+
+  /**
    * Return the header of the last finalized block.
    *
    * @return The header of the last finalized block.
@@ -294,7 +303,8 @@ public class BlockchainQueries {
    * @return The number of transactions sent from the given address.
    */
   public long getTransactionCount(final Address address, final Hash blockHash) {
-    return getAndMapWorldState(blockHash, worldState -> worldState.get(address))
+    return getAndMapWorldState(
+            blockHash, worldState -> Optional.ofNullable(worldState.get(address)))
         .map(Account::getNonce)
         .orElse(0L);
   }
@@ -850,17 +860,18 @@ public class BlockchainQueries {
    * @return the world state at the block number
    */
   public <U> Optional<U> getAndMapWorldState(
-      final Hash blockHash, final Function<MutableWorldState, ? extends U> mapper) {
+      final Hash blockHash, final Function<MutableWorldState, ? extends Optional<U>> mapper) {
+
     return blockchain
         .getBlockHeader(blockHash)
         .flatMap(
             blockHeader -> {
               try (var ws =
                   worldStateArchive
-                      .getMutable(blockHeader.getStateRoot(), blockHeader.getHash(), false)
+                      .getMutable(blockHeader.getStateRoot(), blockHeader.getBlockHash(), false)
                       .orElse(null)) {
                 if (ws != null) {
-                  return Optional.ofNullable(mapper.apply(ws));
+                  return mapper.apply(ws);
                 }
               } catch (Exception ex) {
                 LOG.error("failed worldstate query for " + blockHash.toShortHexString(), ex);
@@ -878,7 +889,7 @@ public class BlockchainQueries {
    * @return the world state at the block number
    */
   public <U> Optional<U> getAndMapWorldState(
-      final long blockNumber, final Function<MutableWorldState, ? extends U> mapper) {
+      final long blockNumber, final Function<MutableWorldState, ? extends Optional<U>> mapper) {
     final Hash blockHash =
         getBlockHeaderByNumber(blockNumber).map(BlockHeader::getHash).orElse(Hash.EMPTY);
     return getAndMapWorldState(blockHash, mapper);
@@ -949,7 +960,9 @@ public class BlockchainQueries {
     return getAndMapWorldState(
         blockHash,
         worldState ->
-            Optional.ofNullable(worldState.get(address)).map(getter).orElse(noAccountValue));
+            Optional.ofNullable(worldState.get(address))
+                .map(getter)
+                .or(() -> Optional.ofNullable(noAccountValue)));
   }
 
   private List<TransactionWithMetadata> formatTransactions(

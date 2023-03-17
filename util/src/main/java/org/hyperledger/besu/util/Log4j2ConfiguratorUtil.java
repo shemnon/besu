@@ -14,6 +14,8 @@
  */
 package org.hyperledger.besu.util;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Map;
 import java.util.Set;
 
@@ -36,18 +38,20 @@ class Log4j2ConfiguratorUtil {
    * @param parentLogger the parent logger
    * @param level the level
    */
-  static void setAllLevels(final String parentLogger, final Level level) {
+  static void setAllLevels(final String parentLogger, final String level) {
     // 1) get logger config
     // 2) if exact match, use it, if not, create it.
     // 3) set level on logger config
     // 4) update child logger configs with level
     // 5) update loggers
+    Level log4JLevel = Level.toLevel(level, null);
+    requireNonNull(log4JLevel);
     final LoggerContext loggerContext = getLoggerContext();
     final Configuration config = loggerContext.getConfiguration();
-    boolean set = setLevel(parentLogger, level, config);
+    boolean set = setLevel(parentLogger, log4JLevel, config);
     for (final Map.Entry<String, LoggerConfig> entry : config.getLoggers().entrySet()) {
       if (entry.getKey().startsWith(parentLogger)) {
-        set |= setLevel(entry.getValue(), level);
+        set |= setLevel(entry.getValue(), log4JLevel);
       }
     }
     if (set) {
@@ -61,7 +65,7 @@ class Log4j2ConfiguratorUtil {
    * @param loggerName the logger name
    */
   static void setLevelDebug(final String loggerName) {
-    setLevel(loggerName, Level.DEBUG);
+    setLevel(loggerName, "DEBUG");
   }
 
   /**
@@ -70,11 +74,13 @@ class Log4j2ConfiguratorUtil {
    * @param loggerName the logger name
    * @param level the level
    */
-  static void setLevel(final String loggerName, final Level level) {
+  static void setLevel(final String loggerName, final String level) {
+    Level log4jLevel = Level.toLevel(level, null);
+    requireNonNull(log4jLevel);
     final LoggerContext loggerContext = getLoggerContext();
     if (Strings.isEmpty(loggerName)) {
-      setRootLevel(loggerContext, level);
-    } else if (setLevel(loggerName, level, loggerContext.getConfiguration())) {
+      setRootLevel(loggerContext, log4jLevel);
+    } else if (setLevel(loggerName, log4jLevel, loggerContext.getConfiguration())) {
       loggerContext.updateLoggers();
     }
   }

@@ -17,7 +17,6 @@ package org.hyperledger.besu.cli.error;
 import java.io.PrintWriter;
 import java.util.function.Supplier;
 
-import org.apache.logging.log4j.Level;
 import picocli.CommandLine;
 import picocli.CommandLine.Model.CommandSpec;
 

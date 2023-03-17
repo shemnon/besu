@@ -23,6 +23,7 @@ import org.hyperledger.besu.ethereum.core.BlockHeaderBuilder;
 import org.hyperledger.besu.ethereum.mainnet.MainnetBlockHeaderFunctions;
 import org.hyperledger.besu.ethereum.referencetests.BlockchainReferenceTestCaseSpec.ReferenceTestBlockHeader;
 import org.hyperledger.besu.ethereum.rlp.BytesValueRLPOutput;
+import org.hyperledger.besu.util.LogConfigurator;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -86,13 +87,13 @@ public class B11rSubCommand implements Runnable {
       description = "The clique seal/signature for the block")
   private final Path sealClique = stdinPath;
 
-  @SuppressWarnings("UnusedVariable") // FIXME do ethash sealing
+  @SuppressWarnings("UnusedVariable")
   @Option(
       names = {"--seal.ethash"},
       description = "Use Proof of Work to seal the block")
   private final Boolean sealEthash = false;
 
-  @SuppressWarnings("UnusedVariable") // FIXME do ethash sealing
+  @SuppressWarnings("UnusedVariable")
   @Option(
       names = {"--seal.ethash.mode"},
       paramLabel = "full path",
@@ -129,6 +130,7 @@ public class B11rSubCommand implements Runnable {
 
   @Override
   public void run() {
+    LogConfigurator.setLevel("", "OFF");
     objectMapper.setDefaultPrettyPrinter(
         (new DefaultPrettyPrinter())
             .withSpacesInObjectEntries()
@@ -207,7 +209,7 @@ public class B11rSubCommand implements Runnable {
     rlpOut.endList();
 
     // withdrawals
-    // TODO
+    // TODO - waiting on b11r spec to specify how withdrawals are added to blocks.
 
     rlpOut.endList();
 

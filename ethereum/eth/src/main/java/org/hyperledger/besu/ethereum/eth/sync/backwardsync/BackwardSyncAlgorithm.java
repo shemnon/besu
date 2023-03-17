@@ -16,7 +16,6 @@
  */
 package org.hyperledger.besu.ethereum.eth.sync.backwardsync;
 
-import static org.hyperledger.besu.util.Slf4jLambdaHelper.debugLambda;
 import static org.slf4j.LoggerFactory.getLogger;
 
 import org.hyperledger.besu.datatypes.Hash;
@@ -36,8 +35,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 
-public class BackwardsSyncAlgorithm implements BesuEvents.InitialSyncCompletionListener {
-  private static final Logger LOG = getLogger(BackwardsSyncAlgorithm.class);
+public class BackwardSyncAlgorithm implements BesuEvents.InitialSyncCompletionListener {
+  private static final Logger LOG = getLogger(BackwardSyncAlgorithm.class);
 
   private final BackwardSyncContext context;
   private final FinalBlockConfirmation finalBlockConfirmation;
@@ -45,7 +44,7 @@ public class BackwardsSyncAlgorithm implements BesuEvents.InitialSyncCompletionL
       new AtomicReference<>(new CountDownLatch(1));
   private volatile boolean finished = false;
 
-  public BackwardsSyncAlgorithm(
+  public BackwardSyncAlgorithm(
       final BackwardSyncContext context, final FinalBlockConfirmation finalBlockConfirmation) {
     this.context = context;
     this.finalBlockConfirmation = finalBlockConfirmation;
@@ -65,7 +64,10 @@ public class BackwardsSyncAlgorithm implements BesuEvents.InitialSyncCompletionL
       return executeSyncStep(firstHash.get())
           .thenAccept(
               result -> {
-                LOG.info("Backward sync target block is {}", result.toLogString());
+                LOG.atDebug()
+                    .setMessage("Backward sync target block is {}")
+                    .addArgument(result::toLogString)
+                    .log();
                 context.getBackwardChain().removeFromHashToAppend(firstHash.get());
                 context.getStatus().updateTargetHeight(result.getHeader().getNumber());
               });
@@ -91,18 +93,18 @@ public class BackwardsSyncAlgorithm implements BesuEvents.InitialSyncCompletionL
     }
 
     if (chainHeader.getNumber() > firstAncestorHeader.getNumber()) {
-      debugLambda(
-          LOG,
-          "Backward reached below current chain head {} : {}",
-          () -> blockchain.getChainHead().toLogString(),
-          firstAncestorHeader::toLogString);
+      LOG.atDebug()
+          .setMessage("Backward reached below current chain head {} : {}")
+          .addArgument(() -> blockchain.getChainHead().toLogString())
+          .addArgument(firstAncestorHeader::toLogString)
+          .log();
     }
 
     if (finalBlockConfirmation.ancestorHeaderReached(firstAncestorHeader)) {
-      debugLambda(
-          LOG,
-          "Backward sync reached ancestor header with {}, starting forward sync",
-          firstAncestorHeader::toLogString);
+      LOG.atDebug()
+          .setMessage("Backward sync reached ancestor header with {}, starting forward sync")
+          .addArgument(firstAncestorHeader::toLogString)
+          .log();
       return executeForwardAsync();
     }
 

@@ -15,8 +15,6 @@
  */
 package org.hyperledger.besu.ethereum.bonsai;
 
-import static org.hyperledger.besu.util.Slf4jLambdaHelper.debugLambda;
-
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.bonsai.BonsaiWorldStateKeyValueStorage.BonsaiUpdater;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
@@ -97,16 +95,20 @@ public abstract class AbstractTrieLogManager<T extends MutableWorldState>
 
   @VisibleForTesting
   TrieLogLayer prepareTrieLog(
-      final BlockHeader blockHeader,
-      final Hash worldStateRootHash,
+      final BlockHeader forBlockHeader,
+      final Hash forWorldStateRootHash,
       final BonsaiWorldStateUpdater localUpdater,
       final BonsaiWorldStateArchive worldStateArchive,
       final BonsaiPersistedWorldState forWorldState) {
-    debugLambda(LOG, "Adding layered world state for {}", blockHeader::toLogString);
-    final TrieLogLayer trieLog = localUpdater.generateTrieLog(blockHeader.getBlockHash());
+    LOG.atDebug()
+        .setMessage("Adding layered world state for {}")
+        .addArgument(forBlockHeader::toLogString)
+        .log();
+    final TrieLogLayer trieLog = localUpdater.generateTrieLog(forBlockHeader.getBlockHash());
     trieLog.freeze();
-    addCachedLayer(blockHeader, worldStateRootHash, trieLog, worldStateArchive, forWorldState);
-    scrubCachedLayers(blockHeader.getNumber());
+    addCachedLayer(
+        forBlockHeader, forWorldStateRootHash, trieLog, worldStateArchive, forWorldState);
+    scrubCachedLayers(forBlockHeader.getNumber());
     return trieLog;
   }
 
@@ -139,11 +141,11 @@ public abstract class AbstractTrieLogManager<T extends MutableWorldState>
       final Hash worldStateRootHash,
       final TrieLogLayer trieLog,
       final BonsaiUpdater stateUpdater) {
-    debugLambda(
-        LOG,
-        "Persisting trie log for block hash {} and world state root {}",
-        blockHeader::toLogString,
-        worldStateRootHash::toHexString);
+    LOG.atDebug()
+        .setMessage("Persisting trie log for block hash {} and world state root {}")
+        .addArgument(blockHeader::toLogString)
+        .addArgument(worldStateRootHash::toHexString)
+        .log();
     final BytesValueRLPOutput rlpLog = new BytesValueRLPOutput();
     trieLog.writeTo(rlpLog);
     stateUpdater
