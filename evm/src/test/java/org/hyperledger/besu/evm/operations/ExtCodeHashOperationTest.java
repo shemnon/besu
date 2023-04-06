@@ -121,11 +121,11 @@ public class ExtCodeHashOperationTest {
   }
 
   private MessageFrame createMessageFrame(final Address requestedAddress) {
-    final UInt256 stackItem = Words.fromAddress(requestedAddress);
+    final Bytes32 stackItem = Words.fromAddress(requestedAddress);
     return createMessageFrame(stackItem);
   }
 
-  private MessageFrame createMessageFrame(final UInt256 stackItem) {
+  private MessageFrame createMessageFrame(final Bytes32 stackItem) {
     final BlockValues blockValues = new FakeBlockValues(1337);
     final MessageFrame frame =
         new TestMessageFrameBuilder()

@@ -49,7 +49,6 @@ import com.google.common.collect.Table;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.bytes.MutableBytes;
-import org.apache.tuweni.units.bigints.UInt256;
 
 /**
  * A container object for all the states associated with a message.
@@ -336,12 +335,7 @@ public class MessageFrame {
         address ->
             Optional.ofNullable(worldUpdater.get(address))
                 .ifPresent(
-                    account ->
-                        warmedUpStorage
-                            .get(address)
-                            .forEach(
-                                storageKeyBytes ->
-                                    account.getStorageValue(UInt256.fromBytes(storageKeyBytes)))));
+                    account -> warmedUpStorage.get(address).forEach(account::getStorageValue)));
   }
 
   /**
@@ -860,7 +854,7 @@ public class MessageFrame {
    * @param storageAddress the storage address
    * @param value the value
    */
-  public void storageWasUpdated(final UInt256 storageAddress, final Bytes value) {
+  public void storageWasUpdated(final Bytes32 storageAddress, final Bytes value) {
     maybeUpdatedStorage = Optional.of(new StorageEntry(storageAddress, value));
   }
 

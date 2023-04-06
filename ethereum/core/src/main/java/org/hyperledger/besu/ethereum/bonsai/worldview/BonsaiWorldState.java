@@ -149,7 +149,7 @@ public class BonsaiWorldState
 
     // This must be done before updating the accounts so
     // that we can get the storage state hash
-    Stream<Map.Entry<Address, StorageConsumingMap<BonsaiValue<UInt256>>>> storageStream =
+    Stream<Map.Entry<Address, StorageConsumingMap<BonsaiValue<Bytes32>>>> storageStream =
         worldStateUpdater.getStorageToUpdate().entrySet().stream();
     if (maybeStateUpdater.isEmpty()) {
       storageStream =
@@ -239,7 +239,7 @@ public class BonsaiWorldState
   private void updateAccountStorageState(
       final Optional<BonsaiWorldStateKeyValueStorage.BonsaiUpdater> maybeStateUpdater,
       final BonsaiWorldStateUpdateAccumulator worldStateUpdater,
-      final Map.Entry<Address, StorageConsumingMap<BonsaiValue<UInt256>>> storageAccountUpdate) {
+      final Map.Entry<Address, StorageConsumingMap<BonsaiValue<Bytes32>>> storageAccountUpdate) {
     final Address updatedAddress = storageAccountUpdate.getKey();
     final Hash updatedAddressHash = Hash.hash(updatedAddress);
     if (worldStateUpdater.getAccountsToUpdate().containsKey(updatedAddress)) {
@@ -258,10 +258,10 @@ public class BonsaiWorldState
               storageRoot);
 
       // for manicured tries and composting, collect branches here (not implemented)
-      for (final Map.Entry<Hash, BonsaiValue<UInt256>> storageUpdate :
+      for (final Map.Entry<Hash, BonsaiValue<Bytes32>> storageUpdate :
           storageAccountUpdate.getValue().entrySet()) {
         final Hash keyHash = storageUpdate.getKey();
-        final UInt256 updatedStorage = storageUpdate.getValue().getUpdated();
+        final Bytes32 updatedStorage = storageUpdate.getValue().getUpdated();
         try {
           if (updatedStorage == null || updatedStorage.equals(UInt256.ZERO)) {
             maybeStateUpdater.ifPresent(
@@ -501,18 +501,18 @@ public class BonsaiWorldState
   }
 
   @Override
-  public UInt256 getStorageValue(final Address address, final UInt256 storageKey) {
+  public Bytes32 getStorageValue(final Address address, final Bytes32 storageKey) {
     return getStorageValueBySlotHash(address, Hash.hash(storageKey)).orElse(UInt256.ZERO);
   }
 
   @Override
-  public Optional<UInt256> getStorageValueBySlotHash(final Address address, final Hash slotHash) {
+  public Optional<Bytes32> getStorageValueBySlotHash(final Address address, final Hash slotHash) {
     return worldStateStorage
         .getStorageValueBySlotHash(Hash.hash(address), slotHash)
         .map(UInt256::fromBytes);
   }
 
-  public Optional<UInt256> getStorageValueBySlotHash(
+  public Optional<Bytes32> getStorageValueBySlotHash(
       final Supplier<Optional<Hash>> storageRootSupplier,
       final Address address,
       final Hash slotHash) {
@@ -522,7 +522,7 @@ public class BonsaiWorldState
   }
 
   @Override
-  public UInt256 getPriorStorageValue(final Address address, final UInt256 storageKey) {
+  public Bytes32 getPriorStorageValue(final Address address, final Bytes32 storageKey) {
     return getStorageValue(address, storageKey);
   }
 

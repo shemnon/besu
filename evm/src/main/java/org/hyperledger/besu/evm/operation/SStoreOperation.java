@@ -24,7 +24,7 @@ import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import java.util.function.Supplier;
 
 import com.google.common.base.Suppliers;
-import org.apache.tuweni.units.bigints.UInt256;
+import org.apache.tuweni.bytes.Bytes32;
 
 /** The SStore operation. */
 public class SStoreOperation extends AbstractOperation {
@@ -63,8 +63,8 @@ public class SStoreOperation extends AbstractOperation {
   @Override
   public OperationResult execute(final MessageFrame frame, final EVM evm) {
 
-    final UInt256 key = UInt256.fromBytes(frame.popStackItem());
-    final UInt256 newValue = UInt256.fromBytes(frame.popStackItem());
+    final Bytes32 key = Bytes32.leftPad(frame.popStackItem());
+    final Bytes32 newValue = Bytes32.leftPad(frame.popStackItem());
 
     final MutableAccount account =
         frame.getWorldUpdater().getAccount(frame.getRecipientAddress()).getMutable();
@@ -74,9 +74,9 @@ public class SStoreOperation extends AbstractOperation {
 
     final Address address = account.getAddress();
     final boolean slotIsWarm = frame.warmUpStorage(address, key);
-    final Supplier<UInt256> currentValueSupplier =
+    final Supplier<Bytes32> currentValueSupplier =
         Suppliers.memoize(() -> account.getStorageValue(key));
-    final Supplier<UInt256> originalValueSupplier =
+    final Supplier<Bytes32> originalValueSupplier =
         Suppliers.memoize(() -> account.getOriginalStorageValue(key));
 
     final long cost =

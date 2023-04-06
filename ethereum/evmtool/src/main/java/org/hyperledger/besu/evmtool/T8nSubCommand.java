@@ -87,7 +87,6 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Stopwatch;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
-import org.apache.tuweni.units.bigints.UInt256;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -463,7 +462,7 @@ public class T8nSubCommand implements Runnable {
                     .forEach(
                         accountStorageEntry ->
                             storageObject.put(
-                                accountStorageEntry.getKey().map(UInt256::toHexString).orElse("0x"),
+                                accountStorageEntry.getKey().map(Bytes::toHexString).orElse("0x"),
                                 accountStorageEntry.getValue().toHexString()));
               }
               accountObject.put("balance", account.getBalance().toShortHexString());

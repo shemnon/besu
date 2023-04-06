@@ -43,7 +43,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.units.bigints.UInt256;
+import org.apache.tuweni.bytes.Bytes32;
 
 /**
  * Provides various gas cost lookups and calculations used during block processing.
@@ -360,7 +360,7 @@ public interface GasCalculator {
    * @return the gas cost for the SSTORE operation
    */
   long calculateStorageCost(
-      UInt256 newValue, Supplier<UInt256> currentValue, Supplier<UInt256> originalValue);
+      Bytes32 newValue, Supplier<Bytes32> currentValue, Supplier<Bytes32> originalValue);
 
   /**
    * Returns the refund amount for an SSTORE operation.
@@ -371,7 +371,7 @@ public interface GasCalculator {
    * @return the gas refund for the SSTORE operation
    */
   long calculateStorageRefundAmount(
-      UInt256 newValue, Supplier<UInt256> currentValue, Supplier<UInt256> originalValue);
+      Bytes32 newValue, Supplier<Bytes32> currentValue, Supplier<Bytes32> originalValue);
 
   /**
    * Returns the refund amount for deleting an account in a {@link SelfDestructOperation}.

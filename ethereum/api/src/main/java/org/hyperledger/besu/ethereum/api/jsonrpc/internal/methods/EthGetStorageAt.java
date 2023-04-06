@@ -22,6 +22,7 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.BlockParame
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.UInt256Parameter;
 import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
 
+import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
 
 public class EthGetStorageAt extends AbstractBlockParameterOrBlockHashMethod {
@@ -47,7 +48,7 @@ public class EthGetStorageAt extends AbstractBlockParameterOrBlockHashMethod {
     return blockchainQueries
         .get()
         .storageAt(address, position, blockHash)
-        .map(UInt256::toHexString)
+        .map(Bytes::toHexString)
         .orElse(null);
   }
 }

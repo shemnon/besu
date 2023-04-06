@@ -20,17 +20,16 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.tuweni.bytes.Bytes32;
-import org.apache.tuweni.units.bigints.UInt256;
 
 /** The Account storage entry. */
 public class AccountStorageEntry {
 
-  private final UInt256 value;
-  private final Optional<UInt256> key;
+  private final Bytes32 value;
+  private final Optional<Bytes32> key;
   private final Bytes32 keyHash;
 
   private AccountStorageEntry(
-      final UInt256 value, final Bytes32 keyHash, final Optional<UInt256> key) {
+      final Bytes32 value, final Bytes32 keyHash, final Optional<Bytes32> key) {
     this.key = key;
     this.keyHash = keyHash;
     this.value = value;
@@ -45,7 +44,7 @@ public class AccountStorageEntry {
    * @return the account storage entry
    */
   public static AccountStorageEntry create(
-      final UInt256 value, final Bytes32 keyHash, final UInt256 key) {
+      final Bytes32 value, final Bytes32 keyHash, final Bytes32 key) {
     return create(value, keyHash, Optional.ofNullable(key));
   }
 
@@ -58,7 +57,7 @@ public class AccountStorageEntry {
    * @return the account storage entry
    */
   public static AccountStorageEntry create(
-      final UInt256 value, final Bytes32 keyHash, final Optional<UInt256> key) {
+      final Bytes32 value, final Bytes32 keyHash, final Optional<Bytes32> key) {
     return new AccountStorageEntry(value, keyHash, key);
   }
 
@@ -69,7 +68,7 @@ public class AccountStorageEntry {
    * @param value the value
    * @return the account storage entry
    */
-  public static AccountStorageEntry forKeyAndValue(final UInt256 key, final UInt256 value) {
+  public static AccountStorageEntry forKeyAndValue(final Bytes32 key, final Bytes32 value) {
     return create(value, Hash.hash(key), key);
   }
 
@@ -80,7 +79,7 @@ public class AccountStorageEntry {
    *
    * @return If available, returns the original key corresponding to this storage entry.
    */
-  public Optional<UInt256> getKey() {
+  public Optional<Bytes32> getKey() {
     return key;
   }
 
@@ -100,7 +99,7 @@ public class AccountStorageEntry {
    *
    * @return the value
    */
-  public UInt256 getValue() {
+  public Bytes32 getValue() {
     return value;
   }
 
@@ -109,10 +108,9 @@ public class AccountStorageEntry {
     if (o == this) {
       return true;
     }
-    if (!(o instanceof AccountStorageEntry)) {
+    if (!(o instanceof AccountStorageEntry that)) {
       return false;
     }
-    final AccountStorageEntry that = (AccountStorageEntry) o;
     return Objects.equals(value, that.value)
         && Objects.equals(key, that.key)
         && Objects.equals(keyHash, that.keyHash);

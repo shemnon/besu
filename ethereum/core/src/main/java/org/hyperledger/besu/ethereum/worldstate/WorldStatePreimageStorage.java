@@ -31,7 +31,7 @@ public interface WorldStatePreimageStorage {
 
   interface Updater {
 
-    Updater putStorageTrieKeyPreimage(Bytes32 trieKey, UInt256 preimage);
+    Updater putStorageTrieKeyPreimage(Bytes32 trieKey, Bytes32 preimage);
 
     Updater putAccountTrieKeyPreimage(Bytes32 trieKey, Address preimage);
 

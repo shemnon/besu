@@ -26,6 +26,7 @@ import org.hyperledger.besu.evm.gascalculator.PetersburgGasCalculator;
 
 import java.util.function.Supplier;
 
+import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
@@ -123,8 +124,8 @@ public class RefundSstoreGasTest {
   @Parameter(value = 6)
   public long expectedGasRefund;
 
-  private final Supplier<UInt256> mockSupplierForOriginalValue = mockSupplier();
-  private final Supplier<UInt256> mockSupplierCurrentValue = mockSupplier();
+  private final Supplier<Bytes32> mockSupplierForOriginalValue = mockSupplier();
+  private final Supplier<Bytes32> mockSupplierCurrentValue = mockSupplier();
 
   @SuppressWarnings("unchecked")
   private <T> Supplier<T> mockSupplier() {

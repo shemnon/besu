@@ -62,7 +62,6 @@ import com.google.common.base.Stopwatch;
 import io.vertx.core.json.JsonObject;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
-import org.apache.tuweni.units.bigints.UInt256;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -428,7 +427,7 @@ public class EvmToolCommand implements Runnable {
                                     "   \""
                                         + accountStorageEntry
                                             .getKey()
-                                            .map(UInt256::toHexString)
+                                            .map(Bytes::toHexString)
                                             .orElse("-")
                                         + "\": \""
                                         + accountStorageEntry.getValue().toHexString()

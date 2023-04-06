@@ -17,7 +17,7 @@ package org.hyperledger.besu.evm.gascalculator;
 import java.util.function.Supplier;
 
 import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.units.bigints.UInt256;
+import org.apache.tuweni.bytes.Bytes32;
 
 /** The Istanbul gas calculator. */
 public class IstanbulGasCalculator extends PetersburgGasCalculator {
@@ -57,15 +57,15 @@ public class IstanbulGasCalculator extends PetersburgGasCalculator {
   @Override
   // As per https://eips.ethereum.org/EIPS/eip-2200
   public long calculateStorageCost(
-      final UInt256 newValue,
-      final Supplier<UInt256> currentValue,
-      final Supplier<UInt256> originalValue) {
+      final Bytes32 newValue,
+      final Supplier<Bytes32> currentValue,
+      final Supplier<Bytes32> originalValue) {
 
-    final UInt256 localCurrentValue = currentValue.get();
+    final Bytes32 localCurrentValue = currentValue.get();
     if (localCurrentValue.equals(newValue)) {
       return SLOAD_GAS;
     } else {
-      final UInt256 localOriginalValue = originalValue.get();
+      final Bytes32 localOriginalValue = originalValue.get();
       if (localOriginalValue.equals(localCurrentValue)) {
         return localOriginalValue.isZero() ? SSTORE_SET_GAS : SSTORE_RESET_GAS;
       } else {
@@ -77,15 +77,15 @@ public class IstanbulGasCalculator extends PetersburgGasCalculator {
   @Override
   // As per https://eips.ethereum.org/EIPS/eip-2200
   public long calculateStorageRefundAmount(
-      final UInt256 newValue,
-      final Supplier<UInt256> currentValue,
-      final Supplier<UInt256> originalValue) {
+      final Bytes32 newValue,
+      final Supplier<Bytes32> currentValue,
+      final Supplier<Bytes32> originalValue) {
 
-    final UInt256 localCurrentValue = currentValue.get();
+    final Bytes32 localCurrentValue = currentValue.get();
     if (localCurrentValue.equals(newValue)) {
       return 0L;
     } else {
-      final UInt256 localOriginalValue = originalValue.get();
+      final Bytes32 localOriginalValue = originalValue.get();
       if (localOriginalValue.equals(localCurrentValue)) {
         if (localOriginalValue.isZero()) {
           return 0L;
