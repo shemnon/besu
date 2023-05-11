@@ -69,7 +69,8 @@ public class BaseFeeMarketBlockHeaderGasPriceValidationRuleTest {
   public void shouldReturnFalseIfNotInitialBaseFeeAtForkBlock() {
     assertThat(
             validationRule.validate(
-                blockHeader(FORK_BLOCK, 0, Optional.of(feeMarket.getInitialBasefee().subtract(1L))),
+                blockHeader(
+                    FORK_BLOCK, 0, Optional.of(feeMarket.getInitialBasefee().subtract(Wei.of(1L)))),
                 null))
         .isFalse();
   }

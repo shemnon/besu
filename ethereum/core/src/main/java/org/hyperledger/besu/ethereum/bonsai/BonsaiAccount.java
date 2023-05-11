@@ -227,7 +227,7 @@ public class BonsaiAccount implements MutableAccount, EvmAccount {
     out.startList();
 
     out.writeLongScalar(nonce);
-    out.writeUInt256Scalar(balance);
+    out.writeBytesScalar(balance);
     out.writeBytes(storageRoot);
     out.writeBytes(codeHash);
 

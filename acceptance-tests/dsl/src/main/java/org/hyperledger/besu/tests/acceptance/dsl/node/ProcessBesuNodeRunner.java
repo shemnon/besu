@@ -107,8 +107,7 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
       params.add("--miner-stratum-host");
       params.add(node.getMiningParameters().getStratumNetworkInterface());
       params.add("--min-gas-price");
-      params.add(
-          Integer.toString(node.getMiningParameters().getMinTransactionGasPrice().intValue()));
+      params.add(Integer.toString(node.getMiningParameters().getMinTransactionGasPrice().toInt()));
       params.add("--Xminer-remote-sealers-limit");
       params.add(Integer.toString(node.getMiningParameters().getRemoteSealersLimit()));
       params.add("--Xminer-remote-sealers-hashrate-ttl");

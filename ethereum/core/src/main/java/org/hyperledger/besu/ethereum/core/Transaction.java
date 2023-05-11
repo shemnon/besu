@@ -48,7 +48,6 @@ import com.google.common.primitives.Longs;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
-import org.apache.tuweni.units.bigints.UInt256s;
 
 /** An operation submitted by an external actor to be applied to the system. */
 public class Transaction
@@ -387,13 +386,14 @@ public class Transaction
         .map(
             baseFee -> {
               if (getType().supports1559FeeMarket()) {
-                if (baseFee.greaterOrEqualThan(getMaxFeePerGas().get())) {
+                if (baseFee.compareTo(getMaxFeePerGas().get()) >= 0) {
                   return Wei.ZERO;
                 }
-                return UInt256s.min(
-                    getMaxPriorityFeePerGas().get(), getMaxFeePerGas().get().subtract(baseFee));
+                return getMaxPriorityFeePerGas()
+                    .get()
+                    .min(getMaxFeePerGas().get().subtract(baseFee));
               } else {
-                if (baseFee.greaterOrEqualThan(getGasPrice().get())) {
+                if (baseFee.compareTo(getGasPrice().get()) >= 0) {
                   return Wei.ZERO;
                 }
                 return getGasPrice().get().subtract(baseFee);
@@ -843,10 +843,10 @@ public class Transaction
         rlpOutput -> {
           rlpOutput.startList();
           rlpOutput.writeLongScalar(nonce);
-          rlpOutput.writeUInt256Scalar(gasPrice);
+          rlpOutput.writeBytesScalar(gasPrice);
           rlpOutput.writeLongScalar(gasLimit);
           rlpOutput.writeBytes(to.map(Bytes::copy).orElse(Bytes.EMPTY));
-          rlpOutput.writeUInt256Scalar(value);
+          rlpOutput.writeBytesScalar(value);
           rlpOutput.writeBytes(payload);
           if (chainId.isPresent()) {
             rlpOutput.writeBigIntegerScalar(chainId.get());
@@ -900,11 +900,11 @@ public class Transaction
       final RLPOutput rlpOutput) {
     rlpOutput.writeBigIntegerScalar(chainId.orElseThrow());
     rlpOutput.writeLongScalar(nonce);
-    rlpOutput.writeUInt256Scalar(maxPriorityFeePerGas);
-    rlpOutput.writeUInt256Scalar(maxFeePerGas);
+    rlpOutput.writeBytesScalar(maxPriorityFeePerGas);
+    rlpOutput.writeBytesScalar(maxFeePerGas);
     rlpOutput.writeLongScalar(gasLimit);
     rlpOutput.writeBytes(to.map(Bytes::copy).orElse(Bytes.EMPTY));
-    rlpOutput.writeUInt256Scalar(value);
+    rlpOutput.writeBytesScalar(value);
     rlpOutput.writeBytes(payload);
     TransactionEncoder.writeAccessList(rlpOutput, accessList);
   }
@@ -936,7 +936,7 @@ public class Transaction
                   chainId,
                   accessList,
                   rlpOutput);
-              rlpOutput.writeUInt256Scalar(maxFeePerDataGas);
+              rlpOutput.writeBytesScalar(maxFeePerDataGas);
               TransactionEncoder.writeBlobVersionedHashes(rlpOutput, versionedHashes);
               rlpOutput.endList();
             });

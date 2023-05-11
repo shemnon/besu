@@ -150,6 +150,6 @@ public class ClassicBlockProcessor extends AbstractBlockProcessor {
       final Wei blockReward, final long blockNumber, final int ommersSize) {
     final int blockEra = getBlockEra(blockNumber, eraLength);
     final Wei winnerReward = getBlockWinnerRewardByEra(blockEra);
-    return winnerReward.plus(winnerReward.multiply(ommersSize).divide(32));
+    return winnerReward.add(winnerReward.multiply(ommersSize).divide(32));
   }
 }

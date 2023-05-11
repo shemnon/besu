@@ -14,15 +14,18 @@
  */
 package org.hyperledger.besu.datatypes;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.math.BigInteger;
 import java.util.Arrays;
 
 import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.units.bigints.BaseUInt256Value;
+import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.bytes.DelegatingBytes;
 import org.apache.tuweni.units.bigints.UInt256;
 
 /** A particular quantity of Wei, the Ethereum currency. */
-public final class Wei extends BaseUInt256Value<Wei> implements Quantity {
+public final class Wei extends DelegatingBytes implements Quantity {
 
   /** The constant ZERO. */
   public static final Wei ZERO = of(0);
@@ -38,20 +41,26 @@ public final class Wei extends BaseUInt256Value<Wei> implements Quantity {
    *
    * @param value the value
    */
-  Wei(final UInt256 value) {
-    super(value, Wei::new);
+  private Wei(final UInt256 value) {
+    super(value);
+  }
+
+  private Wei(final Bytes bytes) {
+    super(bytes);
   }
 
   private Wei(final long v) {
-    this(UInt256.valueOf(v));
+    super(Bytes.ofUnsignedLong(v));
   }
 
   private Wei(final BigInteger v) {
-    this(UInt256.valueOf(v));
+    super(Bytes.wrap(v.toByteArray()));
+    checkArgument(size() <= 32, "Wei values must fit in a uint256");
   }
 
   private Wei(final String hexString) {
-    this(UInt256.fromHexString(hexString));
+    super(Bytes.fromHexStringLenient(hexString));
+    checkArgument(size() <= 32, "Wei values must fit in a uint256");
   }
 
   /**
@@ -101,7 +110,7 @@ public final class Wei extends BaseUInt256Value<Wei> implements Quantity {
    * @return the wei
    */
   public static Wei wrap(final Bytes value) {
-    return new Wei(UInt256.fromBytes(value));
+    return new Wei(value);
   }
 
   /**
@@ -132,11 +141,6 @@ public final class Wei extends BaseUInt256Value<Wei> implements Quantity {
   @Override
   public BigInteger getAsBigInteger() {
     return toBigInteger();
-  }
-
-  @Override
-  public String toHexString() {
-    return super.toHexString();
   }
 
   @Override
@@ -226,5 +230,149 @@ public final class Wei extends BaseUInt256Value<Wei> implements Quantity {
     public String toString() {
       return name().toLowerCase();
     }
+  }
+
+  /**
+   * //DOCME
+   *
+   * @param wei //DOCME
+   * @return //DOCME
+   */
+  public Wei addExact(final Wei wei) {
+    try {
+      return of(new BigInteger(1, toArrayUnsafe()).add(new BigInteger(1, wei.toArrayUnsafe())));
+    } catch (IllegalArgumentException iae) {
+      throw new ArithmeticException("UInt256 overflow");
+    }
+  }
+
+  /**
+   * //DOCME
+   *
+   * @param wei //DOCME
+   * @return //DOCME
+   */
+  public Wei add(final Wei wei) {
+    byte[] results =
+        new BigInteger(1, toArrayUnsafe())
+            .add(new BigInteger(1, wei.toArrayUnsafe()))
+            .toByteArray();
+    if (results.length <= 32) {
+      return new Wei(Bytes.wrap(results));
+    } else {
+      return new Wei(Bytes.wrap(results, results.length - 32, 32));
+    }
+  }
+
+  /**
+   * //DOCME
+   *
+   * @param wei //DOCME
+   * @return //DOCME
+   */
+  public Wei subtract(final Wei wei) {
+    BigInteger result =
+        new BigInteger(1, toArrayUnsafe()).add(new BigInteger(1, wei.toArrayUnsafe()));
+    byte[] resultBytes = result.toByteArray();
+    if (resultBytes.length <= 32) {
+      if (result.signum() >= 0) {
+        return new Wei(Bytes.wrap(resultBytes));
+      } else {
+        return new Wei(Bytes32.leftPad(Bytes.wrap(resultBytes), (byte) -1));
+      }
+    } else {
+      return new Wei(Bytes.wrap(resultBytes, resultBytes.length - 32, 32));
+    }
+  }
+
+  /**
+   * //DOCME
+   *
+   * @param multiplcand //DOCME
+   * @return //DOCME
+   */
+  public Wei multiply(final long multiplcand) {
+    byte[] results =
+        new BigInteger(1, toArrayUnsafe()).multiply(BigInteger.valueOf(multiplcand)).toByteArray();
+    if (results.length <= 32) {
+      return new Wei(Bytes.wrap(results));
+    } else {
+      return new Wei(Bytes.wrap(results, results.length - 32, 32));
+    }
+  }
+
+  /**
+   * //DOCME
+   *
+   * @param divisor //DOCME
+   * @return //DOCME
+   */
+  public Wei divide(final long divisor) {
+    byte[] results =
+        new BigInteger(1, toArrayUnsafe()).divide(BigInteger.valueOf(divisor)).toByteArray();
+    if (results.length <= 32) {
+      return new Wei(Bytes.wrap(results));
+    } else {
+      return new Wei(Bytes.wrap(results, results.length - 32, 32));
+    }
+  }
+
+  /**
+   * //DOCME
+   *
+   * @param other //DOCME
+   * @return //DOCME
+   */
+  public Wei min(final Wei other) {
+    return lessThan(other) ? this : other;
+  }
+
+  /**
+   * //DOCME
+   *
+   * @param other //DOCME
+   * @return //DOCME
+   */
+  public Wei max(final Wei other) {
+    return greaterThan(other) ? this : other;
+  }
+
+  /**
+   * //DOCME
+   *
+   * @param other //DOCME
+   * @return //DOCME
+   */
+  public boolean greaterOrEqualThan(final Wei other) {
+    return this.compareTo(other) >= 0;
+  }
+
+  /**
+   * //DOCME
+   *
+   * @param other //DOCME
+   * @return //DOCME
+   */
+  public boolean lessThan(final Wei other) {
+    return this.compareTo(other) < 0;
+  }
+
+  /**
+   * //DOCME
+   *
+   * @param other //DOCME
+   * @return //DOCME
+   */
+  public boolean greaterThan(final Wei other) {
+    return this.compareTo(other) > 0;
+  }
+
+  /**
+   * //DOCME
+   *
+   * @return //DOCME
+   */
+  public String toDecimalString() {
+    return toBigInteger().toString(10);
   }
 }

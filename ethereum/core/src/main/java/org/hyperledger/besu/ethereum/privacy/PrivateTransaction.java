@@ -46,7 +46,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
-import org.apache.tuweni.units.bigints.UInt256;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -463,10 +462,10 @@ public class PrivateTransaction implements org.hyperledger.besu.plugin.data.Priv
     out.startList();
 
     out.writeLongScalar(t.getNonce());
-    out.writeUInt256Scalar((Wei) t.getGasPrice());
+    out.writeBytesScalar((Wei) t.getGasPrice());
     out.writeLongScalar(t.getGasLimit());
     out.writeBytes(t.getTo().isPresent() ? t.getTo().get() : Bytes.EMPTY);
-    out.writeUInt256Scalar((Wei) t.getValue());
+    out.writeBytesScalar((Wei) t.getValue());
     out.writeBytes(t.getPayload());
     out.writeBigIntegerScalar(t.getV());
     out.writeBigIntegerScalar(t.getR());
@@ -566,15 +565,15 @@ public class PrivateTransaction implements org.hyperledger.besu.plugin.data.Priv
             out -> {
               out.startList();
               out.writeLongScalar(nonce);
-              out.writeUInt256Scalar(gasPrice);
+              out.writeBytesScalar(gasPrice);
               out.writeLongScalar(gasLimit);
               out.writeBytes(to == null ? Bytes.EMPTY : to);
-              out.writeUInt256Scalar(value);
+              out.writeBytesScalar(value);
               out.writeBytes(payload);
               if (chainId.isPresent()) {
                 out.writeBigIntegerScalar(chainId.get());
-                out.writeUInt256Scalar(UInt256.ZERO);
-                out.writeUInt256Scalar(UInt256.ZERO);
+                out.writeBytesScalar(Bytes.EMPTY);
+                out.writeBytesScalar(Bytes.EMPTY);
               }
               out.writeBytes(privateFrom);
               privateFor.ifPresent(pF -> out.writeList(pF, (bv, rlpO) -> rlpO.writeBytes(bv)));

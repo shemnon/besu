@@ -37,7 +37,6 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import com.google.common.base.Suppliers;
-import org.apache.tuweni.units.bigints.BaseUInt256Value;
 
 public class EthGetMinerDataByBlockHash implements JsonRpcMethod {
   private final Supplier<BlockchainQueries> blockchain;
@@ -94,7 +93,7 @@ public class EthGetMinerDataByBlockHash implements JsonRpcMethod {
                                     .getEffectiveGasPrice(receipt.getBaseFee())
                                     .multiply(receipt.getGasUsed()))
                         .orElse(Wei.ZERO))
-            .reduce(Wei.ZERO, BaseUInt256Value::add);
+            .reduce(Wei.ZERO, Wei::add);
     final Wei uncleInclusionReward =
         staticBlockReward.multiply(block.getOmmers().size()).divide(32);
     final Wei netBlockReward = staticBlockReward.add(transactionFee).add(uncleInclusionReward);

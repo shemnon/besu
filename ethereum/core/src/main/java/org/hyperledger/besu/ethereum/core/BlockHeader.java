@@ -207,7 +207,7 @@ public class BlockHeader extends SealableBlockHeader
     out.writeBytes(mixHashOrPrevRandao);
     out.writeLong(nonce);
     if (baseFee != null) {
-      out.writeUInt256Scalar(baseFee);
+      out.writeBytesScalar(baseFee);
     }
     if (withdrawalsRoot != null) {
       out.writeBytes(withdrawalsRoot);

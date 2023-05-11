@@ -73,9 +73,9 @@ class WithdrawalsProcessorTest {
     withdrawalsProcessor.processWithdrawals(withdrawals, updater);
 
     assertThat(worldState.get(Address.fromHexString("0x1")).getBalance())
-        .isEqualTo(GWei.of(100).getAsWei().add(1));
+        .isEqualTo(GWei.of(100).getAsWei().add(Wei.of(1L)));
     assertThat(worldState.get(Address.fromHexString("0x2")).getBalance())
-        .isEqualTo(GWei.of(200).getAsWei().add(2));
+        .isEqualTo(GWei.of(200).getAsWei().add(Wei.of(2L)));
     assertThat(worldState.get(Address.fromHexString("0x3")).getBalance()).isEqualTo(Wei.of(3));
   }
 

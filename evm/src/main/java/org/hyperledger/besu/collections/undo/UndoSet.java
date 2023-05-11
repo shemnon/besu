@@ -52,12 +52,14 @@ public class UndoSet<V> implements Set<V>, UndoableCollection {
    * Create an UndoSet backed by another Set instance.
    *
    * @param delegate The Set instance to use for backing storage
+   * @param <V> The type of the collection.
+   * @return an unduable set
    */
   public static <V> UndoSet<V> of(final Set<V> delegate) {
     return new UndoSet<>(delegate);
   }
 
-  protected UndoSet(final Set<V> delegate) {
+  UndoSet(final Set<V> delegate) {
     this.delegate = delegate;
     undoLog = new ArrayList<>();
   }

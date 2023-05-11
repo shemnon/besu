@@ -40,8 +40,8 @@ public final class AccountRangeMessage extends AbstractSnapMessageData {
   }
 
   public static AccountRangeMessage readFrom(final MessageData message) {
-    if (message instanceof AccountRangeMessage) {
-      return (AccountRangeMessage) message;
+    if (message instanceof AccountRangeMessage accountRangeMessage) {
+      return accountRangeMessage;
     }
     final int code = message.getCode();
     if (code != SnapV1.ACCOUNT_RANGE) {
@@ -122,7 +122,7 @@ public final class AccountRangeMessage extends AbstractSnapMessageData {
     final BytesValueRLPOutput rlpOutput = new BytesValueRLPOutput();
     rlpOutput.startList();
     rlpOutput.writeLongScalar(accountValue.getNonce()); // nonce
-    rlpOutput.writeUInt256Scalar(accountValue.getBalance()); // balance
+    rlpOutput.writeBytesScalar(accountValue.getBalance()); // balance
     rlpOutput.writeBytes(accountValue.getStorageRoot());
     rlpOutput.writeBytes(accountValue.getCodeHash());
     rlpOutput.endList();

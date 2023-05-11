@@ -84,10 +84,10 @@ public class TransactionEncoder {
   static void encodeFrontier(final Transaction transaction, final RLPOutput out) {
     out.startList();
     out.writeLongScalar(transaction.getNonce());
-    out.writeUInt256Scalar(transaction.getGasPrice().orElseThrow());
+    out.writeBytesScalar(transaction.getGasPrice().orElseThrow());
     out.writeLongScalar(transaction.getGasLimit());
     out.writeBytes(transaction.getTo().map(Bytes::copy).orElse(Bytes.EMPTY));
-    out.writeUInt256Scalar(transaction.getValue());
+    out.writeBytesScalar(transaction.getValue());
     out.writeBytes(transaction.getPayload());
     writeSignatureAndV(transaction, out);
     out.endList();
@@ -127,10 +127,10 @@ public class TransactionEncoder {
       final RLPOutput rlpOutput) {
     rlpOutput.writeBigIntegerScalar(chainId.orElseThrow());
     rlpOutput.writeLongScalar(nonce);
-    rlpOutput.writeUInt256Scalar(gasPrice);
+    rlpOutput.writeBytesScalar(gasPrice);
     rlpOutput.writeLongScalar(gasLimit);
     rlpOutput.writeBytes(to.map(Bytes::copy).orElse(Bytes.EMPTY));
-    rlpOutput.writeUInt256Scalar(value);
+    rlpOutput.writeBytesScalar(value);
     rlpOutput.writeBytes(payload);
     /*
     Access List encoding should look like this
@@ -155,11 +155,11 @@ public class TransactionEncoder {
     out.startList();
     out.writeBigIntegerScalar(transaction.getChainId().orElseThrow());
     out.writeLongScalar(transaction.getNonce());
-    out.writeUInt256Scalar(transaction.getMaxPriorityFeePerGas().orElseThrow());
-    out.writeUInt256Scalar(transaction.getMaxFeePerGas().orElseThrow());
+    out.writeBytesScalar(transaction.getMaxPriorityFeePerGas().orElseThrow());
+    out.writeBytesScalar(transaction.getMaxFeePerGas().orElseThrow());
     out.writeLongScalar(transaction.getGasLimit());
     out.writeBytes(transaction.getTo().map(Bytes::copy).orElse(Bytes.EMPTY));
-    out.writeUInt256Scalar(transaction.getValue());
+    out.writeBytesScalar(transaction.getValue());
     out.writeBytes(transaction.getPayload());
     writeAccessList(out, transaction.getAccessList());
     writeSignatureAndRecoveryId(transaction, out);

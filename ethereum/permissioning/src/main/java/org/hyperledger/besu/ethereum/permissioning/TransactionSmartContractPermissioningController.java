@@ -32,7 +32,6 @@ import java.util.Optional;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
-import org.apache.tuweni.units.bigints.BaseUInt256Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -197,7 +196,7 @@ public class TransactionSmartContractPermissioningController
         encodeAddress(transaction.getSender()),
         encodeAddress(transaction.getTo()),
         transaction.getValue(),
-        transaction.getGasPrice().map(BaseUInt256Value::toBytes).orElse(Bytes32.ZERO),
+        transaction.getGasPrice().map(Bytes32::leftPad).orElse(Bytes32.ZERO),
         encodeLong(transaction.getGasLimit()),
         encodeBytes(transaction.getPayload()));
   }

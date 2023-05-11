@@ -340,7 +340,6 @@ public class MessageFrame {
 
     undoMark = transientStorage.mark();
     this.versionedHashes = versionedHashes;
-
   }
 
   /**
@@ -1289,6 +1288,10 @@ public class MessageFrame {
     transientStorage.put(accountAddress, slot, value);
   }
 
+  /**
+   * Roll back shared data states to the state at the beginning of this frame. i.e. a revert on
+   * transient storage, warmed up addresses, and warmed up storage.
+   */
   public void rollback() {
     transientStorage.undo(undoMark);
     warmedUpAddresses.undo(undoMark);
@@ -1313,6 +1316,7 @@ public class MessageFrame {
   /** The MessageFrame Builder. */
   public static class Builder {
 
+    private MessageFrame parentMessageFrame;
     private Type type;
     private Deque<MessageFrame> messageFrameStack;
     private WorldUpdater worldUpdater;
@@ -1339,6 +1343,18 @@ public class MessageFrame {
     private Multimap<Address, Bytes32> accessListWarmStorage = HashMultimap.create();
 
     private Optional<List<Hash>> versionedHashes;
+
+    /**
+     * The "parent" message frame. When present some fields wlll be populated from the parent and
+     * ignored if passed in via builder
+     *
+     * @param parentMessageFrame the parent message frame
+     * @return the builder
+     */
+    public Builder parentMessageFrame(final MessageFrame parentMessageFrame) {
+      this.parentMessageFrame = parentMessageFrame;
+      return this;
+    }
 
     /**
      * Sets Type.
@@ -1616,24 +1632,26 @@ public class MessageFrame {
     }
 
     private void validate() {
+      if (parentMessageFrame == null) {
+        checkState(messageFrameStack != null, "Missing message frame message frame stack");
+        checkState(worldUpdater != null, "Missing message frame world updater");
+        checkState(originator != null, "Missing message frame originator");
+        checkState(gasPrice != null, "Missing message frame getGasRemaining price");
+        checkState(blockValues != null, "Missing message frame block header");
+        checkState(depth > -1, "Missing message frame depth");
+        checkState(miningBeneficiary != null, "Missing mining beneficiary");
+        checkState(blockHashLookup != null, "Missing block hash lookup");
+      }
       checkState(type != null, "Missing message frame type");
-      checkState(messageFrameStack != null, "Missing message frame message frame stack");
-      checkState(worldUpdater != null, "Missing message frame world updater");
       checkState(initialGas != null, "Missing message frame initial getGasRemaining");
       checkState(address != null, "Missing message frame recipient");
-      checkState(originator != null, "Missing message frame originator");
       checkState(contract != null, "Missing message frame contract");
-      checkState(gasPrice != null, "Missing message frame getGasRemaining price");
       checkState(inputData != null, "Missing message frame input data");
       checkState(sender != null, "Missing message frame sender");
       checkState(value != null, "Missing message frame value");
       checkState(apparentValue != null, "Missing message frame apparent value");
       checkState(code != null, "Missing message frame code");
-      checkState(blockValues != null, "Missing message frame block header");
-      checkState(depth > -1, "Missing message frame depth");
       checkState(completer != null, "Missing message frame completer");
-      checkState(miningBeneficiary != null, "Missing mining beneficiary");
-      checkState(blockHashLookup != null, "Missing block hash lookup");
     }
 
     /**
@@ -1644,36 +1662,67 @@ public class MessageFrame {
     public MessageFrame build() {
       validate();
 
-      MessageFrame messageFrame =
-          new MessageFrame(
-              type,
-              messageFrameStack,
-              worldUpdater,
-              initialGas,
-              address,
-              originator,
-              contract,
-              gasPrice,
-              inputData,
-              sender,
-              value,
-              apparentValue,
-              code,
-              blockValues,
-              depth,
-              isStatic,
-              completer,
-              miningBeneficiary,
-              blockHashLookup,
-              contextVariables == null ? Map.of() : contextVariables,
-              reason,
-              maxStackSize,
-              versionedHashes);
-      for (Address a : accessListWarmAddresses) {
-        messageFrame.warmUpAddress(a);
+      MessageFrame messageFrame;
+      if (parentMessageFrame == null) {
+        messageFrame =
+            new MessageFrame(
+                type,
+                messageFrameStack,
+                worldUpdater,
+                initialGas,
+                address,
+                originator,
+                contract,
+                gasPrice,
+                inputData,
+                sender,
+                value,
+                apparentValue,
+                code,
+                blockValues,
+                depth,
+                isStatic,
+                completer,
+                miningBeneficiary,
+                blockHashLookup,
+                contextVariables == null ? Map.of() : contextVariables,
+                reason,
+                maxStackSize,
+                versionedHashes);
+      } else {
+        messageFrame =
+            new MessageFrame(
+                type,
+                parentMessageFrame.messageFrameStack,
+                parentMessageFrame.worldUpdater.updater(),
+                initialGas,
+                address,
+                parentMessageFrame.originator,
+                contract,
+                parentMessageFrame.gasPrice,
+                inputData,
+                sender,
+                value,
+                apparentValue,
+                code,
+                parentMessageFrame.blockValues,
+                parentMessageFrame.depth + 1,
+                parentMessageFrame.isStatic,
+                completer,
+                parentMessageFrame.miningBeneficiary,
+                parentMessageFrame.blockHashLookup,
+                contextVariables == null ? Map.of() : contextVariables,
+                reason,
+                parentMessageFrame.maxStackSize,
+                parentMessageFrame.versionedHashes);
       }
-      for (var e : accessListWarmStorage.entries()) {
-        messageFrame.warmUpStorage(e.getKey(), e.getValue());
+      if (!accessListWarmStorage.isEmpty()) {
+        for (Address a : accessListWarmAddresses) {
+          messageFrame.warmUpAddress(a);
+        }
+        for (var e : accessListWarmStorage.entries()) {
+          messageFrame.warmUpStorage(e.getKey(), e.getValue());
+        }
       }
       return messageFrame;
     }
