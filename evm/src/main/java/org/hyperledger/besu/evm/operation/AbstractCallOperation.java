@@ -266,7 +266,6 @@ public abstract class AbstractCallOperation extends AbstractOperation {
 
     frame.popStackItems(getStackItemsConsumed());
     if (childFrame.getState() == MessageFrame.State.COMPLETED_SUCCESS) {
-      frame.mergeWarmedUpFields(childFrame);
       frame.pushStackItem(SUCCESS_STACK_ITEM);
     } else {
       frame.pushStackItem(FAILURE_STACK_ITEM);

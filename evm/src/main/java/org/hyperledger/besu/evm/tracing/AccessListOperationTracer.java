@@ -14,30 +14,23 @@
  */
 package org.hyperledger.besu.evm.tracing;
 
-import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.evm.AccessListEntry;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.operation.Operation.OperationResult;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-
-import com.google.common.collect.Multimap;
-import org.apache.tuweni.bytes.Bytes32;
 
 /** The Access List Operation Tracer. */
 public class AccessListOperationTracer extends EstimateGasOperationTracer {
 
-  private Multimap<Address, Bytes32> warmedUpStorage;
+  //  private Table<Address, Bytes32, Boolean> warmedUpStorage;
 
   @Override
   public void tracePostExecution(final MessageFrame frame, final OperationResult operationResult) {
     super.tracePostExecution(frame, operationResult);
-    warmedUpStorage = frame.getWarmedUpStorage();
+    //    warmedUpStorage = frame.getWarmedUpStorage();
   }
-
-  @Override
-  public void tracePreExecution(final MessageFrame frame) {}
 
   /**
    * Get the access list.
@@ -45,15 +38,18 @@ public class AccessListOperationTracer extends EstimateGasOperationTracer {
    * @return the access list
    */
   public List<AccessListEntry> getAccessList() {
-    final List<AccessListEntry> list = new ArrayList<>();
-    if (warmedUpStorage != null) {
-      warmedUpStorage
-          .asMap()
-          .forEach(
-              (address, storageKeys) ->
-                  list.add(new AccessListEntry(address, new ArrayList<>(storageKeys))));
-    }
-    return list;
+    //    final List<AccessListEntry> list = new ArrayList<>();
+    // FIXME
+    //    if (warmedUpStorage != null) {
+    //      warmedUpStorage
+    //          .cellSet()
+    //          .forEach(
+    //              (address, key, stored) -> {
+    //                  if (stored == Boolean.TRUE) { list.add(new AccessListEntry(address, new
+    // ArrayList<>(storageKeys)))
+    //    });
+    //    }
+    return Collections.emptyList();
   }
 
   /**

@@ -184,7 +184,6 @@ public abstract class AbstractCreateOperation extends AbstractOperation {
       frame.incrementGasRefund(childFrame.getGasRefund());
 
       if (childFrame.getState() == MessageFrame.State.COMPLETED_SUCCESS) {
-        frame.mergeWarmedUpFields(childFrame);
         frame.pushStackItem(Words.fromAddress(childFrame.getContractAddress()));
       } else {
         frame.setReturnData(childFrame.getOutputData());

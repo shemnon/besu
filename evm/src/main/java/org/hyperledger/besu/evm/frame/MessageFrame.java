@@ -17,6 +17,8 @@ package org.hyperledger.besu.evm.frame;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Collections.emptySet;
 
+import org.hyperledger.besu.collections.undo.UndoSet;
+import org.hyperledger.besu.collections.undo.UndoTable;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Wei;
@@ -55,7 +57,7 @@ import org.apache.tuweni.units.bigints.UInt256;
  * A container object for all the states associated with a message.
  *
  * <p>A message corresponds to an interaction between two accounts. A Transaction spawns at least
- * one message when its processed. Messages can also spawn messages depending on the code executed
+ * one message when it's processed. Messages can also spawn messages depending on the code executed
  * within a message.
  *
  * <p>Note that there is no specific Message object in the code base. Instead, message executions
@@ -214,13 +216,13 @@ public class MessageFrame {
   private Bytes returnData;
   private final boolean isStatic;
 
-  // Transaction substate fields.
+  // Transaction state fields.
   private final List<Log> logs;
   private long gasRefund;
   private final Set<Address> selfDestructs;
   private final Map<Address, Wei> refunds;
-  private final Set<Address> warmedUpAddresses;
-  private final Multimap<Address, Bytes32> warmedUpStorage;
+  private final UndoSet<Address> warmedUpAddresses;
+  private final UndoTable<Address, Bytes32, Boolean> warmedUpStorage;
 
   // Execution Environment fields.
   private final Address recipient;
@@ -234,7 +236,6 @@ public class MessageFrame {
   private final Code code;
   private final BlockValues blockValues;
   private final int depth;
-  private final MessageFrame parentMessageFrame;
   private final Deque<MessageFrame> messageFrameStack;
   private final Address miningBeneficiary;
   private Optional<Bytes> revertReason;
@@ -242,7 +243,7 @@ public class MessageFrame {
   private final Map<String, Object> contextVariables;
   private final Optional<List<Hash>> versionedHashes;
 
-  private final Table<Address, Bytes32, Bytes32> transientStorage = HashBasedTable.create();
+  private final UndoTable<Address, Bytes32, Bytes32> transientStorage;
 
   // Miscellaneous fields.
   private Optional<ExceptionalHaltReason> exceptionalHaltReason = Optional.empty();
@@ -250,6 +251,9 @@ public class MessageFrame {
   private final Consumer<MessageFrame> completer;
   private Optional<MemoryEntry> maybeUpdatedMemory = Optional.empty();
   private Optional<StorageEntry> maybeUpdatedStorage = Optional.empty();
+
+  /** The mark of the undoable collections at the creation of this message frame */
+  private final long undoMark;
 
   /**
    * Builder builder.
@@ -283,12 +287,9 @@ public class MessageFrame {
       final Map<String, Object> contextVariables,
       final Optional<Bytes> revertReason,
       final int maxStackSize,
-      final Set<Address> accessListWarmAddresses,
-      final Multimap<Address, Bytes32> accessListWarmStorage,
       final Optional<List<Hash>> versionedHashes) {
     this.type = type;
     this.messageFrameStack = messageFrameStack;
-    this.parentMessageFrame = messageFrameStack.peek();
     this.worldUpdater = worldUpdater;
     this.gasRemaining = initialGas;
     this.blockHashLookup = blockHashLookup;
@@ -324,24 +325,22 @@ public class MessageFrame {
     this.contextVariables = contextVariables;
     this.revertReason = revertReason;
 
-    this.warmedUpAddresses = new HashSet<>(accessListWarmAddresses);
-    this.warmedUpAddresses.add(sender);
-    this.warmedUpAddresses.add(contract);
-    this.warmedUpStorage = HashMultimap.create(accessListWarmStorage);
+    var parentMessageFrame = messageFrameStack.peek();
+    if (parentMessageFrame == null) {
+      transientStorage = UndoTable.of(HashBasedTable.create());
+      warmedUpAddresses = UndoSet.of(new HashSet<>());
+      warmedUpAddresses.add(sender);
+      warmedUpAddresses.add(contract);
+      warmedUpStorage = UndoTable.of(HashBasedTable.create());
+    } else {
+      transientStorage = parentMessageFrame.transientStorage;
+      warmedUpAddresses = parentMessageFrame.warmedUpAddresses;
+      warmedUpStorage = parentMessageFrame.warmedUpStorage;
+    }
+
+    undoMark = transientStorage.mark();
     this.versionedHashes = versionedHashes;
 
-    // the warmed up addresses will always be a superset of the address keys in the warmed up
-    // storage, so we can do both warm-ups in one pass
-    accessListWarmAddresses.forEach(
-        address ->
-            Optional.ofNullable(worldUpdater.get(address))
-                .ifPresent(
-                    account ->
-                        warmedUpStorage
-                            .get(address)
-                            .forEach(
-                                storageKeyBytes ->
-                                    account.getStorageValue(UInt256.fromBytes(storageKeyBytes)))));
   }
 
   /**
@@ -404,10 +403,10 @@ public class MessageFrame {
   }
 
   /**
-   * Jump function exceptional halt reason.
+   * Execute the mechanics of the JUMPF operation.
    *
    * @param section the section
-   * @return the exceptional halt reason
+   * @return the exceptional halt reason, if the jump failed
    */
   public ExceptionalHaltReason jumpFunction(final int section) {
     CodeSection info = code.getCodeSection(section);
@@ -977,22 +976,7 @@ public class MessageFrame {
    * @return true if the address was already warmed up
    */
   public boolean warmUpAddress(final Address address) {
-    if (warmedUpAddresses.add(address)) {
-      return parentMessageFrame != null && parentMessageFrame.isWarm(address);
-    } else {
-      return true;
-    }
-  }
-
-  private boolean isWarm(final Address address) {
-    MessageFrame frame = this;
-    while (frame != null) {
-      if (frame.warmedUpAddresses.contains(address)) {
-        return true;
-      }
-      frame = frame.parentMessageFrame;
-    }
-    return false;
+    return !warmedUpAddresses.add(address);
   }
 
   /**
@@ -1003,36 +987,7 @@ public class MessageFrame {
    * @return true if the storage slot was already warmed up
    */
   public boolean warmUpStorage(final Address address, final Bytes32 slot) {
-    if (warmedUpStorage.put(address, slot)) {
-      return parentMessageFrame != null && parentMessageFrame.isWarm(address, slot);
-    } else {
-      return true;
-    }
-  }
-
-  private boolean isWarm(final Address address, final Bytes32 slot) {
-    MessageFrame frame = this;
-    while (frame != null) {
-      if (frame.warmedUpStorage.containsEntry(address, slot)) {
-        return true;
-      }
-      frame = frame.parentMessageFrame;
-    }
-    return false;
-  }
-
-  /**
-   * Merge warmed up fields.
-   *
-   * @param childFrame the child frame
-   */
-  public void mergeWarmedUpFields(final MessageFrame childFrame) {
-    if (childFrame == this) {
-      return;
-    }
-
-    warmedUpAddresses.addAll(childFrame.warmedUpAddresses);
-    warmedUpStorage.putAll(childFrame.warmedUpStorage);
+    return warmedUpStorage.put(address, slot, Boolean.TRUE) != null;
   }
 
   /**
@@ -1288,7 +1243,7 @@ public class MessageFrame {
    *
    * @return the warmed up storage
    */
-  public Multimap<Address, Bytes32> getWarmedUpStorage() {
+  public Table<Address, Bytes32, Boolean> getWarmedUpStorage() {
     return warmedUpStorage;
   }
 
@@ -1318,21 +1273,8 @@ public class MessageFrame {
    * @return the data value read
    */
   public Bytes32 getTransientStorageValue(final Address accountAddress, final Bytes32 slot) {
-    Bytes32 data = transientStorage.get(accountAddress, slot);
-
-    if (data != null) {
-      return data;
-    }
-
-    if (parentMessageFrame != null) {
-      data = parentMessageFrame.getTransientStorageValue(accountAddress, slot);
-    }
-    if (data == null) {
-      data = Bytes32.ZERO;
-    }
-    transientStorage.put(accountAddress, slot, data);
-
-    return data;
+    Bytes32 v = transientStorage.get(accountAddress, slot);
+    return v == null ? Bytes32.ZERO : v;
   }
 
   /**
@@ -1347,11 +1289,10 @@ public class MessageFrame {
     transientStorage.put(accountAddress, slot, value);
   }
 
-  /** Writes the transient storage to the parent frame, if one exists */
-  public void commitTransientStorage() {
-    if (parentMessageFrame != null) {
-      parentMessageFrame.transientStorage.putAll(transientStorage);
-    }
+  public void rollback() {
+    transientStorage.undo(undoMark);
+    warmedUpAddresses.undo(undoMark);
+    warmedUpStorage.undo(undoMark);
   }
 
   /**
@@ -1703,32 +1644,38 @@ public class MessageFrame {
     public MessageFrame build() {
       validate();
 
-      return new MessageFrame(
-          type,
-          messageFrameStack,
-          worldUpdater,
-          initialGas,
-          address,
-          originator,
-          contract,
-          gasPrice,
-          inputData,
-          sender,
-          value,
-          apparentValue,
-          code,
-          blockValues,
-          depth,
-          isStatic,
-          completer,
-          miningBeneficiary,
-          blockHashLookup,
-          contextVariables == null ? Map.of() : contextVariables,
-          reason,
-          maxStackSize,
-          accessListWarmAddresses,
-          accessListWarmStorage,
-          versionedHashes);
+      MessageFrame messageFrame =
+          new MessageFrame(
+              type,
+              messageFrameStack,
+              worldUpdater,
+              initialGas,
+              address,
+              originator,
+              contract,
+              gasPrice,
+              inputData,
+              sender,
+              value,
+              apparentValue,
+              code,
+              blockValues,
+              depth,
+              isStatic,
+              completer,
+              miningBeneficiary,
+              blockHashLookup,
+              contextVariables == null ? Map.of() : contextVariables,
+              reason,
+              maxStackSize,
+              versionedHashes);
+      for (Address a : accessListWarmAddresses) {
+        messageFrame.warmUpAddress(a);
+      }
+      for (var e : accessListWarmStorage.entries()) {
+        messageFrame.warmUpStorage(e.getKey(), e.getValue());
+      }
+      return messageFrame;
     }
   }
 }

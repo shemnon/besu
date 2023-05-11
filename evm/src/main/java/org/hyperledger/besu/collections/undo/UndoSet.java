@@ -1,3 +1,18 @@
+/*
+ * Copyright contributors to Hyperledger Besu
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ */
 package org.hyperledger.besu.collections.undo;
 
 import java.util.ArrayList;
@@ -38,7 +53,11 @@ public class UndoSet<V> implements Set<V>, UndoableCollection {
    *
    * @param delegate The Set instance to use for backing storage
    */
-  public UndoSet(final Set<V> delegate) {
+  public static <V> UndoSet<V> of(final Set<V> delegate) {
+    return new UndoSet<>(delegate);
+  }
+
+  protected UndoSet(final Set<V> delegate) {
     this.delegate = delegate;
     undoLog = new ArrayList<>();
   }
