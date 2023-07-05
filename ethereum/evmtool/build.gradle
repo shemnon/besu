@@ -56,8 +56,6 @@ dependencies {
   implementation 'info.picocli:picocli'
   implementation 'io.vertx:vertx-core'
 
-  runtimeOnly 'org.slf4j:slf4j-nop'
-
   annotationProcessor 'com.google.dagger:dagger-compiler'
   annotationProcessor 'info.picocli:picocli-codegen'
 
@@ -67,6 +65,9 @@ dependencies {
   testImplementation 'org.mockito:mockito-core'
 
   testRuntimeOnly 'org.junit.vintage:junit-vintage-engine'
+
+  // No logging in graalvm EvmTool
+  nativeImageClasspath 'org.slf4j:slf4j-nop'
 }
 
 mainClassName = 'org.hyperledger.besu.evmtool.EvmTool'
@@ -101,7 +102,7 @@ tasks.register("dockerDistUntar") {
   }
 }
 
-task distDocker(type: Exec) {
+tasks.register('distDocker', Exec) {
   dependsOn dockerDistUntar
   def dockerBuildVersion = project.hasProperty('release.releaseVersion') ? project.property('release.releaseVersion') : "${rootProject.version}"
   def dockerOrgName = project.hasProperty('dockerOrgName') ? project.getProperty("dockerOrgName") : "hyperledger"
@@ -123,15 +124,15 @@ task distDocker(type: Exec) {
   args "-c", "docker build --build-arg BUILD_DATE=${buildTime()} --build-arg VERSION=${dockerBuildVersion} --build-arg VCS_REF=${getCheckedOutGitCommitHash()} -t ${image} ."
 }
 
-task dockerUpload(type: Exec) {
+tasks.register('dockerUpload', Exec) {
   dependsOn distDocker
-  def dockerBuildVersion = project.hasProperty('release.releaseVersion') ? project.property('release.releaseVersion') : "${rootProject.version}"
+  String dockerBuildVersion = project.hasProperty('release.releaseVersion') ? project.property('release.releaseVersion') : "${rootProject.version}"
   def dockerOrgName = project.hasProperty('dockerOrgName') ? project.getProperty("dockerOrgName") : "hyperledger"
   def dockerArtifactName = project.hasProperty("dockerArtifactName") ? project.getProperty("dockerArtifactName") : "besu-evmtool"
   def imageName = "${dockerOrgName}/${dockerArtifactName}"
   def image = "${imageName}:${dockerBuildVersion}"
   def cmd = "docker push '${image}'"
-  def additionalTags = []
+  List<String> additionalTags = []
 
   if (project.hasProperty('branch') && project.property('branch') == 'main') {
     additionalTags.add('develop')
@@ -171,9 +172,14 @@ configurations.nativeImageClasspath {
   exclude group: 'io.netty', module: 'netty-common'
   exclude group: 'io.netty', module: 'netty-transport'
 
-  // keep log4j from sneaking in.  GraalVM has an aleric reaction if it sees even one class
+  // keep log4j from sneaking in.  GraalVM has an allergic reaction if it sees even one class
   exclude group: 'org.slf4j', module: 'log4j-over-slf4j:1.7.36'
   exclude group: "log4j", module: "log4j"
   exclude group: "org.apache.logging.log4j"
+
+  // We only want one version of bouncy castle
   exclude group: 'org.bouncycastle', module: 'bcprov-jdk18on'
+
+  // Opentelemetry is unused in CLI tools, and causes static initializations GraalVM doesn't like
+  exclude group: 'io.opentelemetry'
 }
