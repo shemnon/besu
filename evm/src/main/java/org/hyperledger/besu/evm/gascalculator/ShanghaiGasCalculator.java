@@ -1,4 +1,3 @@
-package org.hyperledger.besu.evm.gascalculator;
 /*
  * Copyright contributors to Hyperledger Besu.
  *
@@ -13,8 +12,10 @@ package org.hyperledger.besu.evm.gascalculator;
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+package org.hyperledger.besu.evm.gascalculator;
+
 import static org.hyperledger.besu.evm.internal.Words.clampedAdd;
-import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
+import static org.hyperledger.besu.evm.internal.Words.clampedToInt;
 
 import org.hyperledger.besu.evm.frame.MessageFrame;
 
@@ -37,7 +38,9 @@ public class ShanghaiGasCalculator extends LondonGasCalculator {
 
   @Override
   public long createOperationGasCost(final MessageFrame frame) {
-    final long initCodeLength = clampedToLong(frame.getStackItem(2));
+    // because code is stored in arrays Besu only supports contracts up to 2 GiB length, so trim to
+    // Int.
+    final long initCodeLength = clampedToInt(frame.getStackItem(2));
     return clampedAdd(super.createOperationGasCost(frame), calculateInitGasCost(initCodeLength));
   }
 

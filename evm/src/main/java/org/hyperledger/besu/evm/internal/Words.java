@@ -93,6 +93,29 @@ public interface Words {
   }
 
   /**
+   * The value of the bytes as though it was representing an unsigned integer, however if the value
+   * exceeds Integer.MAX_VALUE then Integer.MAX_VALUE will be returned.
+   *
+   * @param uint the unsigned integer
+   * @return the least of the integer value or Integer.MAX_VALUE
+   */
+  static int clampedToInt(final Bytes uint) {
+    if (uint.size() <= 4) {
+      final int result = uint.toInt();
+      return result < 0 ? Integer.MAX_VALUE : result;
+    }
+
+    final Bytes trimmed = uint.trimLeadingZeros();
+    if (trimmed.size() <= 8) {
+      final int result = trimmed.toInt();
+      return result < 0 ? Integer.MAX_VALUE : result;
+    } else {
+      // clamp to the largest int.
+      return Integer.MAX_VALUE;
+    }
+  }
+
+  /**
    * The value of the long as though it was representing an unsigned integer, however if the value
    * is out of range it will return the number at the end of the range.
    *
