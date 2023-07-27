@@ -25,6 +25,7 @@ import org.hyperledger.besu.ethereum.rlp.RLPOutput;
 import org.hyperledger.besu.evm.AccessListEntry;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -76,10 +77,34 @@ public class TransactionEncoder {
               TYPED_TRANSACTION_ENCODERS.get(transactionType),
               "Developer Error. A supported transaction type %s has no associated encoding logic",
               transactionType);
-      return Bytes.concatenate(
+      return concatenate(
           Bytes.of(transactionType.getSerializedType()),
           RLP.encode(rlpOutput -> encoder.encode(transaction, rlpOutput)));
     }
+  }
+
+  static Bytes concatenate(Bytes... values) {
+    if (values.length == 0) {
+      return Bytes.EMPTY;
+    }
+
+    int size;
+    try {
+      size = Arrays.stream(values).mapToInt(Bytes::size).reduce(0, Math::addExact);
+    } catch (ArithmeticException e) {
+      throw new IllegalArgumentException(
+          "Combined length of values is too long (> Integer.MAX_VALUE)");
+    }
+
+    byte[] target = new byte[size];
+
+    int offset = 0;
+    for (Bytes value : values) {
+      int valueSize = value.size();
+      System.arraycopy(value.toArrayUnsafe(), 0, target, offset, value.size());
+      offset += valueSize;
+    }
+    return Bytes.wrap(target);
   }
 
   static void encodeFrontier(final Transaction transaction, final RLPOutput out) {
