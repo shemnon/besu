@@ -34,6 +34,7 @@ import org.hyperledger.besu.ethereum.core.MutableWorldState;
 import org.hyperledger.besu.ethereum.core.Withdrawal;
 import org.hyperledger.besu.ethereum.referencetests.ReferenceTestBlockchain;
 import org.hyperledger.besu.ethereum.referencetests.ReferenceTestWorldState;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 
 import java.util.List;
 import java.util.Optional;
@@ -156,7 +157,8 @@ abstract class AbstractBlockProcessorTest {
           blockReward,
           miningBeneficiaryCalculator,
           skipZeroBlockRewards,
-          protocolSchedule);
+          protocolSchedule,
+          new NoOpMetricsSystem());
     }
 
     @Override

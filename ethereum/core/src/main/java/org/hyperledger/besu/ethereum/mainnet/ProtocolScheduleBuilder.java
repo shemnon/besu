@@ -19,6 +19,8 @@ import org.hyperledger.besu.ethereum.chain.BadBlockManager;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
 import org.hyperledger.besu.ethereum.privacy.PrivateTransactionValidator;
 import org.hyperledger.besu.evm.internal.EvmConfiguration;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 
 import java.math.BigInteger;
 import java.util.Optional;
@@ -41,6 +43,7 @@ public class ProtocolScheduleBuilder {
   private final boolean isRevertReasonEnabled;
   private final EvmConfiguration evmConfiguration;
   private final BadBlockManager badBlockManager = new BadBlockManager();
+  private final MetricsSystem metricsSystem;
 
   private DefaultProtocolSchedule protocolSchedule;
 
@@ -57,7 +60,8 @@ public class ProtocolScheduleBuilder {
         protocolSpecAdapters,
         privacyParameters,
         isRevertReasonEnabled,
-        evmConfiguration);
+        evmConfiguration,
+        new NoOpMetricsSystem());
   }
 
   public ProtocolScheduleBuilder(
@@ -72,22 +76,25 @@ public class ProtocolScheduleBuilder {
         protocolSpecAdapters,
         privacyParameters,
         isRevertReasonEnabled,
-        evmConfiguration);
+        evmConfiguration,
+        new NoOpMetricsSystem());
   }
 
-  private ProtocolScheduleBuilder(
+  ProtocolScheduleBuilder(
       final GenesisConfigOptions config,
       final Optional<BigInteger> defaultChainId,
       final ProtocolSpecAdapters protocolSpecAdapters,
       final PrivacyParameters privacyParameters,
       final boolean isRevertReasonEnabled,
-      final EvmConfiguration evmConfiguration) {
+      final EvmConfiguration evmConfiguration,
+      final MetricsSystem metricsSystem) {
     this.config = config;
     this.protocolSpecAdapters = protocolSpecAdapters;
     this.privacyParameters = privacyParameters;
     this.isRevertReasonEnabled = isRevertReasonEnabled;
     this.evmConfiguration = evmConfiguration;
     this.defaultChainId = defaultChainId;
+    this.metricsSystem = metricsSystem;
   }
 
   public ProtocolSchedule createProtocolSchedule() {
@@ -377,9 +384,11 @@ public class ProtocolScheduleBuilder {
 
     switch (milestoneType) {
       case BLOCK_NUMBER -> protocolSchedule.putBlockNumberMilestone(
-          blockNumberOrTimestamp, getProtocolSpec(protocolSchedule, definition, modifier));
+          blockNumberOrTimestamp,
+          getProtocolSpec(protocolSchedule, definition.metricsSystem(metricsSystem), modifier));
       case TIMESTAMP -> protocolSchedule.putTimestampMilestone(
-          blockNumberOrTimestamp, getProtocolSpec(protocolSchedule, definition, modifier));
+          blockNumberOrTimestamp,
+          getProtocolSpec(protocolSchedule, definition.metricsSystem(metricsSystem), modifier));
       default -> throw new IllegalStateException(
           "Unexpected milestoneType: "
               + milestoneType

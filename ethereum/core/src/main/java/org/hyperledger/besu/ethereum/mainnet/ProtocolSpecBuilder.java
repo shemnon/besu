@@ -37,6 +37,8 @@ import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.internal.EvmConfiguration;
 import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
 import org.hyperledger.besu.evm.processor.AbstractMessageProcessor;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -81,6 +83,7 @@ public class ProtocolSpecBuilder {
   private PoWHasher powHasher = PoWHasher.ETHASH_LIGHT;
   private boolean isPoS = false;
   private boolean isReplayProtectionSupported = false;
+  private MetricsSystem metricsSystem = new NoOpMetricsSystem();
 
   public ProtocolSpecBuilder gasCalculator(final Supplier<GasCalculator> gasCalculatorBuilder) {
     this.gasCalculatorBuilder = gasCalculatorBuilder;
@@ -276,6 +279,11 @@ public class ProtocolSpecBuilder {
     return this;
   }
 
+  public ProtocolSpecBuilder metricsSystem(final MetricsSystem metricsSystem) {
+    this.metricsSystem = metricsSystem;
+    return this;
+  }
+
   public ProtocolSpec build(final ProtocolSchedule protocolSchedule) {
     checkNotNull(gasCalculatorBuilder, "Missing gasCalculator");
     checkNotNull(gasLimitCalculatorBuilder, "Missing gasLimitCalculatorBuilder");
@@ -333,7 +341,8 @@ public class ProtocolSpecBuilder {
 
     final BlockBodyValidator blockBodyValidator = blockBodyValidatorBuilder.apply(protocolSchedule);
 
-    BlockProcessor blockProcessor = createBlockProcessor(transactionProcessor, protocolSchedule);
+    BlockProcessor blockProcessor =
+        createBlockProcessor(transactionProcessor, protocolSchedule, metricsSystem);
     // Set private Tx Processor
     PrivateTransactionProcessor privateTransactionProcessor =
         createPrivateTransactionProcessor(
@@ -426,14 +435,16 @@ public class ProtocolSpecBuilder {
 
   private BlockProcessor createBlockProcessor(
       final MainnetTransactionProcessor transactionProcessor,
-      final ProtocolSchedule protocolSchedule) {
+      final ProtocolSchedule protocolSchedule,
+      final MetricsSystem metricsSystem) {
     return blockProcessorBuilder.apply(
         transactionProcessor,
         transactionReceiptFactory,
         blockReward,
         miningBeneficiaryCalculator,
         skipZeroBlockRewards,
-        protocolSchedule);
+        protocolSchedule,
+        metricsSystem);
   }
 
   private BlockHeaderValidator createBlockHeaderValidator(
@@ -472,7 +483,8 @@ public class ProtocolSpecBuilder {
         Wei blockReward,
         MiningBeneficiaryCalculator miningBeneficiaryCalculator,
         boolean skipZeroBlockRewards,
-        ProtocolSchedule protocolSchedule);
+        ProtocolSchedule protocolSchedule,
+        MetricsSystem metricsSystem);
   }
 
   public interface BlockValidatorBuilder {
