@@ -14,8 +14,6 @@
  */
 package org.hyperledger.besu.evm.operation;
 
-import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
-
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.evm.Code;
@@ -65,7 +63,11 @@ public abstract class AbstractCallOperation extends AbstractOperation {
    * @return the additional gas to provide the call operation
    */
   protected long gas(final MessageFrame frame) {
-    return clampedToLong(frame.getStackItem(0));
+    try {
+      return frame.getStackItem(0).trimLeadingZeros().toLong();
+    } catch (final ArithmeticException | IllegalArgumentException ae) {
+      return Long.MAX_VALUE;
+    }
   }
 
   /**
