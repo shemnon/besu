@@ -28,6 +28,7 @@ import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
 import org.hyperledger.besu.ethereum.mainnet.ScheduledProtocolSpec;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 
 import java.math.BigInteger;
 import java.util.Optional;
@@ -51,7 +52,8 @@ public class NoRewardProtocolScheduleWrapper implements ProtocolSchedule {
             Wei.ZERO,
             original.getMiningBeneficiaryCalculator(),
             original.isSkipZeroBlockRewards(),
-            delegate);
+            delegate,
+            new NoOpMetricsSystem());
     final BlockValidator noRewardBlockValidator =
         new MainnetBlockValidator(
             original.getBlockHeaderValidator(),

@@ -32,11 +32,11 @@ import org.hyperledger.besu.ethereum.mainnet.MainnetTransactionProcessor;
 import org.hyperledger.besu.ethereum.mainnet.MiningBeneficiaryCalculator;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.OptionalLong;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.tuweni.bytes.Bytes;
@@ -91,7 +91,8 @@ public class RewardTraceGeneratorTest {
             blockReward,
             BlockHeader::getCoinbase,
             true,
-            protocolSchedule);
+            protocolSchedule,
+            new NoOpMetricsSystem());
     when(protocolSpec.getBlockProcessor()).thenReturn(blockProcessor);
 
     final Stream<Trace> traceStream =
@@ -131,7 +132,7 @@ public class RewardTraceGeneratorTest {
             .type("reward")
             .build();
 
-    final List<Trace> traces = traceStream.collect(Collectors.toList());
+    final List<Trace> traces = traceStream.toList();
 
     // check block reward
     assertThat(traces.get(0)).usingRecursiveComparison().isEqualTo(blocReward);
@@ -151,7 +152,8 @@ public class RewardTraceGeneratorTest {
             BlockHeader::getCoinbase,
             true,
             eraRounds,
-            protocolSchedule);
+            protocolSchedule,
+            new NoOpMetricsSystem());
     when(protocolSpec.getBlockProcessor()).thenReturn(blockProcessor);
 
     final Stream<Trace> traceStream =
@@ -191,7 +193,7 @@ public class RewardTraceGeneratorTest {
             .type("reward")
             .build();
 
-    final List<Trace> traces = traceStream.collect(Collectors.toList());
+    final List<Trace> traces = traceStream.toList();
 
     // check block reward
     assertThat(traces.get(0)).usingRecursiveComparison().isEqualTo(blocReward);

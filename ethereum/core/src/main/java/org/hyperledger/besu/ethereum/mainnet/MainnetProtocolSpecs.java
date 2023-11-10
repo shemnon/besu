@@ -14,6 +14,8 @@
  */
 package org.hyperledger.besu.ethereum.mainnet;
 
+import static java.util.Objects.requireNonNull;
+
 import org.hyperledger.besu.config.GenesisConfigOptions;
 import org.hyperledger.besu.config.PowAlgorithm;
 import org.hyperledger.besu.datatypes.Address;
@@ -217,7 +219,8 @@ public abstract class MainnetProtocolSpecs {
                 blockReward,
                 miningBeneficiaryCalculator,
                 skipZeroBlockRewards,
-                protocolSchedule) ->
+                protocolSchedule,
+                metricsSystem) ->
                 new DaoBlockProcessor(
                     new MainnetBlockProcessor(
                         transactionProcessor,
@@ -225,7 +228,8 @@ public abstract class MainnetProtocolSpecs {
                         blockReward,
                         miningBeneficiaryCalculator,
                         skipZeroBlockRewards,
-                        protocolSchedule)))
+                        protocolSchedule,
+                        metricsSystem)))
         .name("DaoRecoveryInit");
   }
 
@@ -863,7 +867,8 @@ public abstract class MainnetProtocolSpecs {
         final JsonArray json =
             new JsonArray(
                 Resources.toString(
-                    this.getClass().getResource("/daoAddresses.json"), StandardCharsets.UTF_8));
+                    requireNonNull(this.getClass().getResource("/daoAddresses.json")),
+                    StandardCharsets.UTF_8));
         final List<Address> addresses =
             IntStream.range(0, json.size())
                 .mapToObj(json::getString)
