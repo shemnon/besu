@@ -156,7 +156,7 @@ public class MessageCallProcessor extends AbstractMessageProcessor {
     } else {
       frame.decrementRemainingGas(gasRequirement);
       final PrecompiledContract.PrecompileContractResult result =
-          contract.computePrecompile(frame.getInputData(), frame);
+          contract.computePrecompile(frame.getInputData(), frame, gasRequirement);
       operationTracer.tracePrecompileCall(frame, gasRequirement, result.getOutput());
       if (result.isRefundGas()) {
         frame.incrementRemainingGas(gasRequirement);

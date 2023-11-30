@@ -51,9 +51,22 @@ public interface PrecompiledContract {
    *
    * @param input the input for the pre-compiled contract.
    * @param messageFrame context for this message
+   * @param gasRequirement the value calculated from gasRequirement
    * @return the output of the pre-compiled contract.
    */
-  @SuppressWarnings("deprecation")
+  @Nonnull
+  default PrecompileContractResult computePrecompile(
+      final Bytes input, @Nonnull final MessageFrame messageFrame, final long gasRequirement) {
+    return computePrecompile(input, messageFrame);
+  }
+
+  /**
+   * Executes the pre-compiled contract.
+   *
+   * @param input the input for the pre-compiled contract.
+   * @param messageFrame context for this message
+   * @return the output of the pre-compiled contract.
+   */
   @Nonnull
   default PrecompileContractResult computePrecompile(
       final Bytes input, @Nonnull final MessageFrame messageFrame) {

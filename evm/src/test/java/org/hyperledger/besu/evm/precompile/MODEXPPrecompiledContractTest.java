@@ -163,9 +163,9 @@ class MODEXPPrecompiledContractTest {
     assumeThat(precompiledResult).isNotNull();
     final Bytes input = Bytes.fromHexString(inputString);
     final Bytes expected = Bytes.fromHexString(precompiledResult);
-    assertThat(byzantiumContract.computePrecompile(input, messageFrame).getOutput())
+    assertThat(byzantiumContract.computePrecompile(input, messageFrame, eip198Gas).getOutput())
         .isEqualTo(expected);
-    assertThat(berlinContract.computePrecompile(input, messageFrame).getOutput())
+    assertThat(berlinContract.computePrecompile(input, messageFrame, eip2565Gas).getOutput())
         .isEqualTo(expected);
   }
 

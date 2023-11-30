@@ -42,7 +42,7 @@ public class BigIntegerModularExponentiationPrecompiledContract
       LoggerFactory.getLogger(BigIntegerModularExponentiationPrecompiledContract.class);
 
   /** Use native Arithmetic libraries. */
-  static boolean useNative;
+  static Optional<Boolean> useNative = Optional.empty();
 
   /** The constant BASE_OFFSET. */
   public static final int BASE_OFFSET = 96;
@@ -63,7 +63,7 @@ public class BigIntegerModularExponentiationPrecompiledContract
 
   /** Disable native Arithmetic libraries. */
   public static void disableNative() {
-    useNative = false;
+    useNative = Optional.of(false);
   }
 
   /**
@@ -73,12 +73,12 @@ public class BigIntegerModularExponentiationPrecompiledContract
    */
   public static boolean maybeEnableNative() {
     try {
-      useNative = LibArithmetic.ENABLED;
+      useNative = Optional.of(LibArithmetic.ENABLED);
     } catch (UnsatisfiedLinkError | NoClassDefFoundError ule) {
       LOG.info("modexp native precompile not available: {}", ule.getMessage());
-      useNative = false;
+      useNative = Optional.of(false);
     }
-    return useNative;
+    return useNative.get();
   }
 
   /**
@@ -87,7 +87,7 @@ public class BigIntegerModularExponentiationPrecompiledContract
    * @return the boolean
    */
   public static boolean isNative() {
-    return useNative;
+    return useNative.orElse(true);
   }
 
   @Override
@@ -98,22 +98,7 @@ public class BigIntegerModularExponentiationPrecompiledContract
   @Nonnull
   @Override
   public PrecompileContractResult computePrecompile(
-      final Bytes input, @Nonnull final MessageFrame messageFrame) {
-    if (useNative) {
-      return computeNative(input);
-    } else {
-      return computeDefault(input);
-    }
-  }
-
-  /**
-   * Compute default precompile contract.
-   *
-   * @param input the input
-   * @return the precompile contract result
-   */
-  @Nonnull
-  public PrecompileContractResult computeDefault(final Bytes input) {
+      final Bytes input, @Nonnull final MessageFrame messageFrame, final long gasRequirement) {
     final int baseLength = clampedToInt(baseLength(input));
     final int exponentLength = clampedToInt(exponentLength(input));
     final int modulusLength = clampedToInt(modulusLength(input));
@@ -128,6 +113,32 @@ public class BigIntegerModularExponentiationPrecompiledContract
     final BigInteger base = extractParameter(input, BASE_OFFSET, baseLength);
     final BigInteger exp = extractParameter(input, exponentOffset, exponentLength);
     final BigInteger mod = extractParameter(input, modulusOffset, modulusLength);
+
+    try {
+      // pure java is faster in _most_ but not all cases.
+      if (useNative.orElse(true) && mod.getLowestSetBit() > 0 && gasRequirement > 2000) {
+        return computeNative(input, modulusLength);
+      }
+    } catch (UnsatisfiedLinkError | NoClassDefFoundError ule) {
+      // "hybrid native" mode fails, so go to java-only
+      useNative = Optional.of(false);
+    }
+    return computeDefault(input, base, exp, mod, modulusLength);
+  }
+
+  /**
+   * Compute default precompile contract.
+   *
+   * @param input the input
+   * @return the precompile contract result
+   */
+  @Nonnull
+  public PrecompileContractResult computeDefault(
+      final Bytes input,
+      final BigInteger base,
+      final BigInteger exp,
+      final BigInteger mod,
+      final int modulusLength) {
 
     final Bytes modExp;
     // Result must be the length of the modulus.
@@ -245,10 +256,11 @@ public class BigIntegerModularExponentiationPrecompiledContract
    * Compute native precompile contract.
    *
    * @param input the input
+   * @param modulusLength length, in bytes, of the modulus
    * @return the precompile contract result
    */
-  public PrecompileContractResult computeNative(final @Nonnull Bytes input) {
-    final int modulusLength = clampedToInt(modulusLength(input));
+  public PrecompileContractResult computeNative(
+      final @Nonnull Bytes input, final int modulusLength) {
     final IntByReference o_len = new IntByReference(modulusLength);
 
     final byte[] result = new byte[modulusLength];

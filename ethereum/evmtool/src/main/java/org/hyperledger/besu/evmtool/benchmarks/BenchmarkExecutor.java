@@ -93,19 +93,20 @@ public abstract class BenchmarkExecutor {
    * @return the mean number of seconds each timed iteration took.
    */
   protected double runPrecompileBenchmark(final Bytes arg, final PrecompiledContract contract) {
-    if (contract.computePrecompile(arg, fakeFrame).getOutput() == null) {
+    long gasRequirement = contract.gasRequirement(arg);
+    if (contract.computePrecompile(arg, fakeFrame, gasRequirement).getOutput() == null) {
       throw new RuntimeException("Input is Invalid");
     }
 
     final Stopwatch timer = Stopwatch.createStarted();
     for (int i = 0; i < warmup && timer.elapsed().getSeconds() < 1; i++) {
-      contract.computePrecompile(arg, fakeFrame);
+      contract.computePrecompile(arg, fakeFrame, gasRequirement);
     }
     timer.reset();
     timer.start();
     int executions = 0;
     while (executions < iterations && timer.elapsed().getSeconds() < 1) {
-      contract.computePrecompile(arg, fakeFrame);
+      contract.computePrecompile(arg, fakeFrame, gasRequirement);
       executions++;
     }
     timer.stop();

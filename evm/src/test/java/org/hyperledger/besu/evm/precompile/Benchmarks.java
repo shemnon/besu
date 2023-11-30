@@ -629,16 +629,17 @@ public class Benchmarks {
   }
 
   private static double runBenchmark(final Bytes arg, final PrecompiledContract contract) {
-    if (contract.computePrecompile(arg, fakeFrame).getOutput() == null) {
+    long gasRequirement = contract.gasRequirement(arg);
+    if (contract.computePrecompile(arg, fakeFrame, gasRequirement).getOutput() == null) {
       throw new RuntimeException("Input is Invalid");
     }
 
     for (int i = 0; i < MATH_WARMUP; i++) {
-      contract.computePrecompile(arg, fakeFrame);
+      contract.computePrecompile(arg, fakeFrame, gasRequirement);
     }
     final Stopwatch timer = Stopwatch.createStarted();
     for (int i = 0; i < MATH_ITERATIONS; i++) {
-      contract.computePrecompile(arg, fakeFrame);
+      contract.computePrecompile(arg, fakeFrame, gasRequirement);
     }
     timer.stop();
 
