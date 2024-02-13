@@ -19,6 +19,7 @@ import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.MutableWorldState;
 import org.hyperledger.besu.evm.account.MutableAccount;
 import org.hyperledger.besu.evm.worldstate.WorldUpdater;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 
 import java.math.BigInteger;
 import java.util.List;
@@ -42,14 +43,16 @@ public class ClassicBlockProcessor extends AbstractBlockProcessor {
       final MiningBeneficiaryCalculator miningBeneficiaryCalculator,
       final boolean skipZeroBlockRewards,
       final OptionalLong eraLen,
-      final ProtocolSchedule protocolSchedule) {
+      final ProtocolSchedule protocolSchedule,
+      final MetricsSystem metricsSystem) {
     super(
         transactionProcessor,
         transactionReceiptFactory,
         blockReward,
         miningBeneficiaryCalculator,
         skipZeroBlockRewards,
-        protocolSchedule);
+        protocolSchedule,
+        metricsSystem);
     eraLength = eraLen.orElse(DEFAULT_ERA_LENGTH);
   }
 
@@ -77,7 +80,8 @@ public class ClassicBlockProcessor extends AbstractBlockProcessor {
         return false;
       }
 
-      final MutableAccount ommerCoinbase = updater.getOrCreate(ommerHeader.getCoinbase());
+      final MutableAccount ommerCoinbase =
+          updater.getOrCreate(ommerHeader.getCoinbase());
       final Wei ommerReward =
           getOmmerReward(blockReward, header.getNumber(), ommerHeader.getNumber());
       ommerCoinbase.incrementBalance(ommerReward);

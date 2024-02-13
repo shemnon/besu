@@ -19,8 +19,11 @@ import org.hyperledger.besu.ethereum.core.PrivacyParameters;
 import org.hyperledger.besu.ethereum.difficulty.fixed.FixedDifficultyCalculators;
 import org.hyperledger.besu.ethereum.difficulty.fixed.FixedDifficultyProtocolSchedule;
 import org.hyperledger.besu.evm.internal.EvmConfiguration;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 
 import java.math.BigInteger;
+import java.util.Optional;
 import java.util.function.Function;
 
 /** Provides {@link ProtocolSpec} lookups for mainnet hard forks. */
@@ -42,19 +45,44 @@ public class MainnetProtocolSchedule {
       final GenesisConfigOptions config,
       final PrivacyParameters privacyParameters,
       final boolean isRevertReasonEnabled,
-      final EvmConfiguration evmConfiguration) {
+      final EvmConfiguration evmConfiguration,
+      final MetricsSystem metricsSystem) {
     if (FixedDifficultyCalculators.isFixedDifficultyInConfig(config)) {
       return FixedDifficultyProtocolSchedule.create(
           config, privacyParameters, isRevertReasonEnabled, evmConfiguration);
     }
     return new ProtocolScheduleBuilder(
             config,
-            DEFAULT_CHAIN_ID,
+            Optional.of(DEFAULT_CHAIN_ID),
             ProtocolSpecAdapters.create(0, Function.identity()),
             privacyParameters,
             isRevertReasonEnabled,
-            evmConfiguration)
+            evmConfiguration,
+            metricsSystem)
         .createProtocolSchedule();
+  }
+
+  /**
+   * Create a Mainnet protocol schedule from a config object
+   *
+   * @param config {@link GenesisConfigOptions} containing the config options for the milestone
+   *     starting points
+   * @param privacyParameters the parameters set for private transactions
+   * @param isRevertReasonEnabled whether storing the revert reason is for failed transactions
+   * @param evmConfiguration how to configure the EVMs jumpdest cache
+   * @return A configured mainnet protocol schedule
+   */
+  public static ProtocolSchedule fromConfig(
+      final GenesisConfigOptions config,
+      final PrivacyParameters privacyParameters,
+      final boolean isRevertReasonEnabled,
+      final EvmConfiguration evmConfiguration) {
+    return fromConfig(
+        config,
+        privacyParameters,
+        isRevertReasonEnabled,
+        evmConfiguration,
+        new NoOpMetricsSystem());
   }
 
   /**

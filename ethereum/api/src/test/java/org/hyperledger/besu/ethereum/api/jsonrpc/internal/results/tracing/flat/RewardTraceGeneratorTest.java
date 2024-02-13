@@ -32,6 +32,7 @@ import org.hyperledger.besu.ethereum.mainnet.MainnetTransactionProcessor;
 import org.hyperledger.besu.ethereum.mainnet.MiningBeneficiaryCalculator;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 
 import java.util.Collections;
 import java.util.List;
@@ -91,7 +92,8 @@ public class RewardTraceGeneratorTest {
             blockReward,
             BlockHeader::getCoinbase,
             true,
-            protocolSchedule);
+            protocolSchedule,
+            new NoOpMetricsSystem());
     when(protocolSpec.getBlockProcessor()).thenReturn(blockProcessor);
 
     final Stream<Trace> traceStream =
@@ -151,7 +153,8 @@ public class RewardTraceGeneratorTest {
             BlockHeader::getCoinbase,
             true,
             eraRounds,
-            protocolSchedule);
+            protocolSchedule,
+            new NoOpMetricsSystem());
     when(protocolSpec.getBlockProcessor()).thenReturn(blockProcessor);
 
     final Stream<Trace> traceStream =

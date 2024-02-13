@@ -103,7 +103,7 @@ public interface BlockProcessor {
       final BlockHeader blockHeader,
       final List<Transaction> transactions,
       final List<BlockHeader> ommers) {
-    return processBlock(
+return processBlock(
         blockchain,
         worldState,
         blockHeader,

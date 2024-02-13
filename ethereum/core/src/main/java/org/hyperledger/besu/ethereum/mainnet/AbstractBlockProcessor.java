@@ -35,9 +35,9 @@ import org.hyperledger.besu.ethereum.trie.bonsai.worldview.BonsaiWorldState;
 import org.hyperledger.besu.ethereum.trie.bonsai.worldview.BonsaiWorldStateUpdateAccumulator;
 import org.hyperledger.besu.ethereum.vm.BlockHashLookup;
 import org.hyperledger.besu.ethereum.vm.CachingBlockHashLookup;
-import org.hyperledger.besu.evm.tracing.OperationTracer;
 import org.hyperledger.besu.evm.worldstate.WorldState;
 import org.hyperledger.besu.evm.worldstate.WorldUpdater;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -74,19 +74,23 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
 
   protected final MiningBeneficiaryCalculator miningBeneficiaryCalculator;
 
+  protected final MetricsOperationTracer metricsTracer;
+
   protected AbstractBlockProcessor(
       final MainnetTransactionProcessor transactionProcessor,
       final TransactionReceiptFactory transactionReceiptFactory,
       final Wei blockReward,
       final MiningBeneficiaryCalculator miningBeneficiaryCalculator,
       final boolean skipZeroBlockRewards,
-      final ProtocolSchedule protocolSchedule) {
+      final ProtocolSchedule protocolSchedule,
+      final MetricsSystem metricsSystem) {
     this.transactionProcessor = transactionProcessor;
     this.transactionReceiptFactory = transactionReceiptFactory;
     this.blockReward = blockReward;
     this.miningBeneficiaryCalculator = miningBeneficiaryCalculator;
     this.skipZeroBlockRewards = skipZeroBlockRewards;
     this.protocolSchedule = protocolSchedule;
+    metricsTracer = new MetricsOperationTracer(metricsSystem);
   }
 
   @Override
@@ -141,7 +145,7 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
               blockHeader,
               transaction,
               miningBeneficiary,
-              OperationTracer.NO_TRACING,
+              metricsTracer,
               blockHashLookup,
               true,
               TransactionValidationParams.processingBlock(),

@@ -53,7 +53,8 @@ public enum BesuMetricCategory implements MetricCategory {
   /** Transaction pool besu metric category. */
   TRANSACTION_POOL("transaction_pool"),
   /** Stratum besu metric category. */
-  STRATUM("stratum");
+  STRATUM("stratum"),
+  EVM("evm");
 
   private static final Optional<String> BESU_PREFIX = Optional.of("besu_");
   /** The constant DEFAULT_METRIC_CATEGORIES. */
