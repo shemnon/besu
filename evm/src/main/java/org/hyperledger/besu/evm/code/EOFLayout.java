@@ -624,7 +624,7 @@ public record EOFLayout(
     if (subContainers.length > 0) {
       out.print(prefix);
       out.printf("  03%04x # Sub container count %1$d%n", subContainers.length);
-      for (int i = 0; i < codeSections.length; i++) {
+      for (int i = 0; i < subContainers.length; i++) {
         out.print(prefix);
         out.printf("    %04x # Sub container %d size %1$d%n", subContainers[i].container.size(), i);
       }
