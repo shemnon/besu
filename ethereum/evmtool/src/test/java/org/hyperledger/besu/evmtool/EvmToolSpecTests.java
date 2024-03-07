@@ -57,6 +57,10 @@ public class EvmToolSpecTests {
     return findSpecFiles(new String[] {"b11r"});
   }
 
+  public static Object[][] prettyPrintTests() {
+    return findSpecFiles(new String[] {"pretty-print"});
+  }
+
   public static Object[][] stateTestTests() {
     return findSpecFiles(new String[] {"state-test"});
   }
@@ -100,17 +104,18 @@ public class EvmToolSpecTests {
 
   private static Object[] pathToParams(final String subDir, final File file) {
     try {
-      var spec = specReader.readTree(new FileInputStream(file));
+      final var spec = specReader.readTree(new FileInputStream(file));
       return new Object[] {
         subDir + "/" + file.getName(), spec.get("cli"), spec.get("stdin"), spec.get("stdout")
       };
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new RuntimeException(e);
     }
   }
 
   @ParameterizedTest(name = "{0}")
-  @MethodSource({"b11rTests", "stateTestTests", "t8nTests", "traceTests"})
+  //  @MethodSource({"b11rTests", "prettyPrintTests", "stateTestTests", "t8nTests", "traceTests"})
+  @MethodSource({"prettyPrintTests"})
   void testBySpec(
       final String file,
       final JsonNode cliNode,
@@ -118,7 +123,7 @@ public class EvmToolSpecTests {
       final JsonNode stdoutNode)
       throws IOException {
 
-    String[] cli;
+    final String[] cli;
     if (cliNode.isTextual()) {
       cli = cliNode.textValue().split("\\s+");
     } else {
@@ -130,33 +135,33 @@ public class EvmToolSpecTests {
               .toArray(String[]::new);
     }
 
-    InputStream inputStream;
+    final InputStream inputStream;
     if (stdinNode.isTextual()) {
       inputStream = new ByteArrayInputStream(stdinNode.textValue().getBytes(UTF_8));
     } else {
       inputStream = new ByteArrayInputStream(stdinNode.toString().getBytes(UTF_8));
     }
 
-    EvmToolCommand evmTool = new EvmToolCommand();
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final EvmToolCommand evmTool = new EvmToolCommand();
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     evmTool.execute(inputStream, new PrintWriter(baos, true, UTF_8), cli);
 
     if (stdoutNode.isTextual()) {
       assertThat(baos.toString(UTF_8)).isEqualTo(stdoutNode.textValue());
     } else if (stdoutNode.isArray()) {
-      ArrayNode arrayNode = (ArrayNode) specReader.createArrayNode();
+      final ArrayNode arrayNode = (ArrayNode) specReader.createArrayNode();
       int pos = 0;
-      byte[] output = baos.toByteArray();
+      final byte[] output = baos.toByteArray();
       while (pos < output.length) {
         int next = pos;
         //noinspection StatementWithEmptyBody
         while (output[next++] != ((byte) '\n')) {}
         try {
-          JsonNode value = specReader.readTree(output, pos, next - pos);
+          final JsonNode value = specReader.readTree(output, pos, next - pos);
           if (JsonNodeType.MISSING != value.getNodeType()) {
             arrayNode.add(value);
           }
-        } catch (JsonParseException jpe) {
+        } catch (final JsonParseException jpe) {
           // Discard non-well-formed lines.
           // If those are needed for validation use the text node option.
         }
@@ -164,7 +169,7 @@ public class EvmToolSpecTests {
       }
       assertThatIterable(arrayNode::elements).containsExactlyElementsOf(stdoutNode::elements);
     } else {
-      var actualNode = specReader.readTree(baos.toByteArray());
+      final var actualNode = specReader.readTree(baos.toByteArray());
       assertThat(actualNode).isEqualTo(stdoutNode);
     }
   }

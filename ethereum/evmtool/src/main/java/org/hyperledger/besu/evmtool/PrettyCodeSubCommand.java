@@ -19,6 +19,7 @@ import static org.hyperledger.besu.evmtool.PrettyCodeSubCommand.COMMAND_NAME;
 
 import org.hyperledger.besu.evm.Code;
 import org.hyperledger.besu.evm.code.CodeFactory;
+import org.hyperledger.besu.evm.code.CodeInvalid;
 import org.hyperledger.besu.evm.code.CodeV1;
 import org.hyperledger.besu.util.LogConfigurator;
 
@@ -54,10 +55,14 @@ public class PrettyCodeSubCommand implements Runnable {
 
     for (var hexCode : codeList) {
       Code code = CodeFactory.createCode(Bytes.fromHexString(hexCode), 1, false);
-      if (code instanceof CodeV1 codev1) {
+      if (code instanceof CodeInvalid codeInvalid) {
+        parentCommand.out.println("EOF code is invalid - " + codeInvalid.getInvalidReason());
+      } else if (code instanceof CodeV1 codev1) {
         codev1.prettyPrint(parentCommand.out);
+      } else {
+        parentCommand.out.println(
+            "Pretty printing of legacy EVM is not supported. Patches welcome!");
       }
-      parentCommand.out.println("-----");
     }
   }
 }

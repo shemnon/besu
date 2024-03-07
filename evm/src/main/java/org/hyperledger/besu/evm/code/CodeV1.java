@@ -153,7 +153,7 @@ public class CodeV1 implements Code {
   @Override
   public String prettyPrint() {
     StringWriter sw = new StringWriter();
-    eofLayout.prettyPrint(new PrintWriter(sw, true), "");
+    eofLayout.prettyPrint(new PrintWriter(sw, true), "", "");
     return sw.toString();
   }
 
@@ -163,6 +163,6 @@ public class CodeV1 implements Code {
    * @param out the printwriter to pretty print to
    */
   public void prettyPrint(final PrintWriter out) {
-    eofLayout.prettyPrint(out, "");
+    eofLayout.prettyPrint(out);
   }
 }

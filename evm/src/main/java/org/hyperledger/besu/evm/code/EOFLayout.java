@@ -67,7 +67,7 @@ public record EOFLayout(
   /** code */
   static final int SECTION_CODE = 0x02;
 
-  /** sub-EOF containers for create */
+  /** sub-EOF subContainers for create */
   static final int SECTION_CONTAINER = 0x03;
 
   /** data */
@@ -582,7 +582,7 @@ public record EOFLayout(
    */
   public String prettyPrint() {
     StringWriter sw = new StringWriter();
-    prettyPrint(new PrintWriter(sw, true), "");
+    prettyPrint(new PrintWriter(sw, true), "", "");
     return sw.toString();
   }
 
@@ -592,7 +592,8 @@ public record EOFLayout(
    * @param out the print writer to pretty print to
    */
   public void prettyPrint(final PrintWriter out) {
-    prettyPrint(out, "");
+    out.println("0x # EOF");
+    prettyPrint(out, "", "");
   }
 
   /**
@@ -601,7 +602,8 @@ public record EOFLayout(
    * @param out the print writer to pretty print to
    * @param prefix The prefix to prepend to all output lines (useful for nested subconntainers)
    */
-  public void prettyPrint(final PrintWriter out, final String prefix) {
+  public void prettyPrint(
+      final PrintWriter out, final String prefix, final String subcontainerPrefix) {
 
     if (!isValid()) {
       out.print(prefix);
@@ -612,94 +614,102 @@ public record EOFLayout(
     }
 
     out.print(prefix);
-    out.printf("%sef00%02x # EOF Version %2$d%n", prefix.isEmpty() ? "0x" : "  ", version);
+    out.printf("ef00%02x # Magic and Version ( %1$d )%n", version);
     out.print(prefix);
-    out.printf("  01%04x # Type section length %1$d%n", codeSections.length * 4);
+    out.printf("01%04x # Types length ( %1$d )%n", codeSections.length * 4);
     out.print(prefix);
-    out.printf("  02%04x # Code section count %1$d%n", codeSections.length);
+    out.printf("02%04x # Total code sections ( %1$d )%n", codeSections.length);
     for (int i = 0; i < codeSections.length; i++) {
       out.print(prefix);
-      out.printf("    %04x # Code section %d size %1$d%n", getCodeSection(i).getLength(), i);
+      out.printf("  %04x # Code section %d , %1$d bytes%n", getCodeSection(i).getLength(), i);
     }
     if (subContainers.length > 0) {
       out.print(prefix);
-      out.printf("  03%04x # Sub container count %1$d%n", subContainers.length);
+      out.printf("03%04x # Total subcontainers ( %1$d )%n", subContainers.length);
       for (int i = 0; i < subContainers.length; i++) {
         out.print(prefix);
-        out.printf("    %04x # Sub container %d size %1$d%n", subContainers[i].container.size(), i);
+        out.printf("  %04x # Sub container %d, %1$d byte%n", subContainers[i].container.size(), i);
       }
     }
     out.print(prefix);
-    out.printf("  04%04x # Data section length %1$d", dataLength);
+    out.printf("04%04x # Data section length(  %1$d )", dataLength);
     if (dataLength != data.size()) {
       out.printf(" (actual size %d)", data.size());
     }
     out.print(prefix);
     out.printf("%n");
     out.print(prefix);
-    out.printf("  00     # End Header%n");
-    out.print(prefix);
-    out.printf("  # Types Data%n");
+    out.printf("    00 # Terminator (end of header)%n");
     for (int i = 0; i < codeSections.length; i++) {
       CodeSection cs = getCodeSection(i);
       out.print(prefix);
+      out.printf("       # Code %d types%n", i);
+      out.print(prefix);
+      out.printf("    %02x # %1$d inputs %n", cs.getInputs());
+      out.print(prefix);
       out.printf(
-          "    %02x%02x%04x # Code section %d: inputs=%1$d outputs=%d%s max_stack=%3$d%n",
-          cs.getInputs(),
-          cs.getOutputs() + (cs.isReturning() ? 0 : 0x80),
-          cs.getMaxStackHeight(),
-          i,
+          "    %02x # %d outputs %s%n",
+          cs.isReturning() ? cs.getOutputs() : 0x80,
           cs.getOutputs(),
-          cs.isReturning() ? "" : " Non-Retuning");
+          cs.isReturning() ? "" : " (Non-returning function)");
+      out.print(prefix);
+      out.printf("  %04x # max stack:  %1$d%n", cs.getMaxStackHeight());
     }
     for (int i = 0; i < codeSections.length; i++) {
       CodeSection cs = getCodeSection(i);
       out.print(prefix);
-      out.printf(
-          "  # Code Section %d inputs:%d outputs:%d%s max_stack=%d%n",
-          i,
-          cs.getInputs(),
-          cs.getOutputs(),
-          cs.isReturning() ? "" : " Non-returning",
-          cs.getMaxStackHeight());
+      out.printf("       # Code section %d%n", i);
       byte[] byteCode = container.slice(cs.getEntryPoint(), cs.getLength()).toArray();
       int pc = 0;
       while (pc < byteCode.length) {
         out.print(prefix);
         OpcodeInfo ci = V1_OPCODES[byteCode[pc] & 0xff];
-        out.printf("    %02x", byteCode[pc]);
 
         if (ci.opcode() == RelativeJumpVectorOperation.OPCODE) {
           int tableSize = byteCode[pc + 1];
-          out.printf("%02x \t# @%d %s - %1$d entries%n", tableSize, pc, ci.name());
-          for (int j = 0; j < tableSize; j++) {
-            int b0 = byteCode[pc + j * 2];
-            int b1 = byteCode[pc + j * 2 + 1];
-            out.print(prefix);
-            out.printf("    %02x%02x # [%d] : %d%n", b0, b1, j, (short) (b0 << 8 | b1));
+          out.printf("%02x%02x", byteCode[pc], byteCode[pc + 1]);
+          for (int j = 0; j <= tableSize; j++) {
+            out.printf("%02x%02x", byteCode[pc + j * 2 + 2], byteCode[pc + j * 2 + 3]);
           }
-          pc += tableSize * 2 + 1;
-          out.print("%n");
+          out.printf(" # [%d] %s(", pc, ci.name());
+          for (int j = 0; j <= tableSize; j++) {
+            if (j != 0) {
+              out.print(',');
+            }
+            int b0 = byteCode[pc + j * 2 + 2]; // we want sign extension, so no `& 0xff`
+            int b1 = byteCode[pc + j * 2 + 3];
+            out.print(b0 << 8 | b1);
+          }
+          pc += tableSize * 2 + 4;
+          out.print(")\n");
         } else if (ci.opcode() == RelativeJumpOperation.OPCODE
             || ci.opcode() == RelativeJumpIfOperation.OPCODE) {
           int b0 = byteCode[pc + 1] & 0xff;
           int b1 = byteCode[pc + 2] & 0xff;
           short delta = (short) (b0 << 8 | b1);
-          out.printf(
-              "%02x%02x \t# @%d %s - %d (@%d)", b0, b1, pc, ci.name(), delta, pc + 3 + delta);
+          out.printf("%02x%02x \t# [%d] %s(%d)", b0, b1, pc, ci.name(), delta);
           pc += 3;
           out.printf("%n");
         } else {
           int advance = ci.pcAdvance();
+          if (advance == 1) {
+            out.print("    ");
+          } else if (advance == 2) {
+            out.print("  ");
+          }
+          out.printf("%02x", byteCode[pc]);
           for (int j = 1; j < advance; j++) {
             out.printf("%02x", byteCode[pc + j]);
           }
-          out.printf(" \t# @%d %s", pc, ci.name());
-          if (advance > 1) {
-            out.print(" - 0x");
+          out.printf(" # [%d] %s", pc, ci.name());
+          if (advance == 2) {
+            out.printf("(%d)", byteCode[pc + 1]);
+          } else if (advance > 2) {
+            out.print("(0x");
             for (int j = 1; j < advance; j++) {
               out.printf("%02x", byteCode[pc + j]);
             }
+            out.print(")");
           }
           out.printf("%n");
           pc += advance;
@@ -710,17 +720,23 @@ public record EOFLayout(
     for (int i = 0; i < subContainers.length; i++) {
       var subContainer = subContainers[i];
       out.print(prefix);
-      out.printf("  # Subcontainer %d%n", i);
-      subContainer.prettyPrint(out, prefix + "  ");
+      out.printf("           # Subcontainer %s%d starts here%n", subcontainerPrefix, i);
+
+      subContainer.prettyPrint(out, prefix + "    ", subcontainerPrefix + i + ".");
+      out.print(prefix);
+      out.printf("           # Subcontainer %s%d ends%n", subcontainerPrefix, i);
     }
 
-    if (!data.isEmpty()) {
-      out.print(prefix);
-      out.printf("  # Data section length %1$d", dataLength);
+    out.print(prefix);
+    if (data.isEmpty()) {
+      out.print("       # Data section (empty)\n");
+    } else {
+      out.printf("  # Data section length ( %1$d )", dataLength);
       if (dataLength != data.size()) {
-        out.printf(" (actual size %d)", data.size());
+        out.printf(" actual length ( %d )", data.size());
       }
       out.printf("%n%s  %s%n", prefix, data.toUnprefixedHexString());
     }
+    out.flush();
   }
 }

@@ -110,7 +110,8 @@ public class GeneralStateReferenceTestTools {
     params.ignore("loopMul-.*");
 
     // EOF tests are written against an older version of the spec
-    params.ignore("/stEOF/");
+    params.ignore("/stEOF/ori");
+    params.ignore("/stEOF/stEIP");
   }
 
   private GeneralStateReferenceTestTools() {
