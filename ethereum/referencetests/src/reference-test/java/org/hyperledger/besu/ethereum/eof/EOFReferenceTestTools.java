@@ -68,11 +68,9 @@ public class EOFReferenceTestTools {
       params.ignoreAll();
     }
 
-    // Current EOF validation tests are based off of old specs
-    params.ignore("EOFTests/efExample");
-    params.ignore("EOFTests/EIP4200");
-    params.ignore("EOFTests/EIP4750");
-    params.ignore("EOFTests/EIP5450");
+    // Add exclusions heere
+    // params.ignore("EOFTests/efExample/broken.json");
+    // params.ignore("EOFTests/efBroken");
   }
 
   private EOFReferenceTestTools() {
@@ -96,7 +94,7 @@ public class EOFReferenceTestTools {
       EOFLayout layout = EOFLayout.parseEOF(code);
 
       if (layout.isValid()) {
-        Code parsedCode = CodeFactory.createCode(code, evmVersion.getMaxEofVersion(), true);
+        Code parsedCode = CodeFactory.createCode(code, evmVersion.getMaxEofVersion());
         assertThat(parsedCode.isValid())
             .withFailMessage(
                 () ->
