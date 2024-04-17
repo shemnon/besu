@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
+import org.hyperledger.besu.crypto.SECPSignature;
 import org.hyperledger.besu.crypto.SignatureAlgorithm;
 import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.datatypes.Address;
@@ -76,7 +77,6 @@ public class MainnetTransactionValidatorTest {
 
   private static final TransactionValidationParams transactionValidationParams =
       processingBlockParams;
-
   @Mock protected GasCalculator gasCalculator;
 
   private final Transaction basicTransaction =

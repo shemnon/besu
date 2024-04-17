@@ -67,6 +67,7 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
@@ -441,13 +442,18 @@ public abstract class MainnetProtocolSpecs {
     final int stackSizeLimit = configStackSizeLimit.orElse(MessageFrame.DEFAULT_MAX_STACK_SIZE);
     final long londonForkBlockNumber =
         genesisConfigOptions.getLondonBlockNumber().orElse(Long.MAX_VALUE);
-    final BaseFeeMarket londonFeeMarket =
-        genesisConfigOptions.isZeroBaseFee()
-            ? FeeMarket.zeroBaseFee(londonForkBlockNumber)
-            : genesisConfigOptions.isFixedBaseFee()
-                ? FeeMarket.fixedBaseFee(
-                    londonForkBlockNumber, miningParameters.getMinTransactionGasPrice())
-                : FeeMarket.london(londonForkBlockNumber, genesisConfigOptions.getBaseFeePerGas());
+    final BaseFeeMarket londonFeeMarket;
+    if (genesisConfigOptions.isZeroBaseFee()) {
+      londonFeeMarket = FeeMarket.zeroBaseFee(londonForkBlockNumber);
+    } else if (genesisConfigOptions.isFixedBaseFee()) {
+      londonFeeMarket =
+          FeeMarket.fixedBaseFee(
+              londonForkBlockNumber, miningParameters.getMinTransactionGasPrice());
+    } else {
+      londonFeeMarket =
+          FeeMarket.london(londonForkBlockNumber, genesisConfigOptions.getBaseFeePerGas());
+    }
+
     return berlinDefinition(
             chainId,
             configContractSizeLimit,
@@ -656,13 +662,17 @@ public abstract class MainnetProtocolSpecs {
 
     final int stackSizeLimit = configStackSizeLimit.orElse(MessageFrame.DEFAULT_MAX_STACK_SIZE);
     final long londonForkBlockNumber = genesisConfigOptions.getLondonBlockNumber().orElse(0L);
-    final BaseFeeMarket cancunFeeMarket =
-        genesisConfigOptions.isZeroBaseFee()
-            ? FeeMarket.zeroBaseFee(londonForkBlockNumber)
-            : genesisConfigOptions.isFixedBaseFee()
-                ? FeeMarket.fixedBaseFee(
-                    londonForkBlockNumber, miningParameters.getMinTransactionGasPrice())
-                : FeeMarket.cancun(londonForkBlockNumber, genesisConfigOptions.getBaseFeePerGas());
+    final BaseFeeMarket cancunFeeMarket;
+    if (genesisConfigOptions.isZeroBaseFee()) {
+      cancunFeeMarket = FeeMarket.zeroBaseFee(londonForkBlockNumber);
+    } else if (genesisConfigOptions.isFixedBaseFee()) {
+      cancunFeeMarket =
+          FeeMarket.fixedBaseFee(
+              londonForkBlockNumber, miningParameters.getMinTransactionGasPrice());
+    } else {
+      cancunFeeMarket =
+          FeeMarket.cancun(londonForkBlockNumber, genesisConfigOptions.getBaseFeePerGas());
+    }
 
     return shanghaiDefinition(
             chainId,
@@ -757,8 +767,7 @@ public abstract class MainnetProtocolSpecs {
                     gasCalculator,
                     evm,
                     true,
-                    List.of(
-                        MaxCodeSizeRule.of(contractSizeLimit), EOFValidationCodeRule.of(1, false)),
+                    List.of(MaxCodeSizeRule.of(contractSizeLimit), EOFValidationCodeRule.of(1)),
                     1,
                     SPURIOUS_DRAGON_FORCE_DELETE_WHEN_EMPTY_ADDRESSES))
         // use prague precompiled contracts
@@ -798,8 +807,7 @@ public abstract class MainnetProtocolSpecs {
                     gasCalculator,
                     evm,
                     true,
-                    List.of(
-                        MaxCodeSizeRule.of(contractSizeLimit), EOFValidationCodeRule.of(1, false)),
+                    List.of(MaxCodeSizeRule.of(contractSizeLimit), EOFValidationCodeRule.of(1)),
                     1,
                     SPURIOUS_DRAGON_FORCE_DELETE_WHEN_EMPTY_ADDRESSES))
         // use future configured precompiled contracts
@@ -890,13 +898,7 @@ public abstract class MainnetProtocolSpecs {
         transactionProcessingResult.getRevertReason());
   }
 
-  private static class DaoBlockProcessor implements BlockProcessor {
-
-    private final BlockProcessor wrapped;
-
-    public DaoBlockProcessor(final BlockProcessor wrapped) {
-      this.wrapped = wrapped;
-    }
+  private record DaoBlockProcessor(BlockProcessor wrapped) implements BlockProcessor {
 
     @Override
     public BlockProcessingResult processBlock(
@@ -928,7 +930,8 @@ public abstract class MainnetProtocolSpecs {
         final JsonArray json =
             new JsonArray(
                 Resources.toString(
-                    this.getClass().getResource("/daoAddresses.json"), StandardCharsets.UTF_8));
+                    Objects.requireNonNull(this.getClass().getResource("/daoAddresses.json")),
+                    StandardCharsets.UTF_8));
         final List<Address> addresses =
             IntStream.range(0, json.size())
                 .mapToObj(json::getString)
