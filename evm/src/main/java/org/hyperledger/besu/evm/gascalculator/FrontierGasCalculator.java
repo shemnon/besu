@@ -250,7 +250,6 @@ public class FrontierGasCalculator implements GasCalculator {
         outputDataLength,
         transferValue,
         recipient,
-        to,
         true);
   }
 
@@ -264,7 +263,6 @@ public class FrontierGasCalculator implements GasCalculator {
       final long outputDataLength,
       final Wei transferValue,
       final Account recipient,
-      final Address to,
       final boolean accountIsWarm) {
     final long inputDataMemoryExpansionCost =
         memoryExpansionGasCost(frame, inputDataOffset, inputDataLength);

@@ -26,6 +26,8 @@ import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 
+import java.util.Optional;
+
 import org.apache.tuweni.bytes.Bytes;
 
 /**
@@ -78,9 +80,9 @@ public abstract class AbstractCallOperation extends AbstractOperation {
    * Returns the account the call is being made to.
    *
    * @param frame The current message frame
-   * @return the account the call is being made to
+   * @return the account the call is being made to, or empty if the address is invalid
    */
-  protected abstract Address to(MessageFrame frame);
+  protected abstract Optional<Address> to(MessageFrame frame);
 
   /**
    * Returns the value being transferred in the call
@@ -134,9 +136,9 @@ public abstract class AbstractCallOperation extends AbstractOperation {
    * Returns the account address the call operation is being performed on
    *
    * @param frame The current message frame
-   * @return the account address the call operation is being performed on
+   * @return the account address the call operation is being performed on, or empty if invalid
    */
-  protected abstract Address address(MessageFrame frame);
+  protected abstract Optional<Address> address(MessageFrame frame);
 
   /**
    * Returns the account address the call operation is being sent from
@@ -180,7 +182,12 @@ public abstract class AbstractCallOperation extends AbstractOperation {
       return UNDERFLOW_RESPONSE;
     }
 
-    final Address to = to(frame);
+    final Optional<Address> maybeTo = to(frame);
+    Optional<Address> maybeAddress = address(frame);
+    if (maybeTo.isEmpty() || maybeAddress.isEmpty()) {
+      return new OperationResult(cost(frame, true), ExceptionalHaltReason.UNSUPPORTED_ADDRESS);
+    }
+    final Address to = maybeTo.get();
     final boolean accountIsWarm = frame.warmUpAddress(to) || gasCalculator().isPrecompile(to);
     final long cost = cost(frame, accountIsWarm);
     if (frame.getRemainingGas() < cost) {
@@ -233,7 +240,7 @@ public abstract class AbstractCallOperation extends AbstractOperation {
         .parentMessageFrame(frame)
         .type(MessageFrame.Type.MESSAGE_CALL)
         .initialGas(gasAvailableForChildCall(frame))
-        .address(address(frame))
+        .address(maybeAddress.get())
         .contract(to)
         .inputData(inputData)
         .sender(sender(frame))
@@ -276,8 +283,7 @@ public abstract class AbstractCallOperation extends AbstractOperation {
     final long inputDataLength = inputDataLength(frame);
     final long outputDataOffset = outputDataOffset(frame);
     final long outputDataLength = outputDataLength(frame);
-    final Account recipient = frame.getWorldUpdater().get(address(frame));
-    final Address to = to(frame);
+    final Account recipient = address(frame).map(a -> frame.getWorldUpdater().get(a)).orElse(null);
     GasCalculator gasCalculator = gasCalculator();
 
     return gasCalculator.callOperationGasCost(
@@ -289,7 +295,6 @@ public abstract class AbstractCallOperation extends AbstractOperation {
         outputDataLength,
         value(frame),
         recipient,
-        to,
         accountIsWarm);
   }
 

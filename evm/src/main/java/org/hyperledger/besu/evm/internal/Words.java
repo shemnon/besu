@@ -17,6 +17,7 @@ package org.hyperledger.besu.evm.internal;
 import org.hyperledger.besu.datatypes.Address;
 
 import java.math.BigInteger;
+import java.util.Optional;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
@@ -55,6 +56,27 @@ public interface Words {
       return Address.wrap(bytes);
     } else {
       return Address.wrap(bytes.slice(size - Address.SIZE, Address.SIZE));
+    }
+  }
+
+  /**
+   * Extract an address from the provided address.
+   *
+   * @param bytes The word to extract the address from.
+   * @return An address build from the right-most 160-bits of the {@code bytes} (as according to the
+   *     VM specification (Appendix H. of the Yellow paper)).
+   */
+  static Optional<Address> maybeAddress(final int eofVersion, final Bytes bytes) {
+    final int size = bytes.size();
+    if (size <= 20 || eofVersion == 0) {
+      return Optional.of(toAddress(bytes));
+    } else {
+      Bytes trimmed = bytes.trimLeadingZeros();
+      if (trimmed.size() <= 20) {
+        return Optional.of(toAddress(trimmed));
+      } else {
+        return Optional.empty();
+      }
     }
   }
 

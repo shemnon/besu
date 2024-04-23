@@ -25,6 +25,8 @@ import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.internal.Words;
 
+import java.util.Optional;
+
 /** The Call operation. */
 public class ExtCallOperation extends AbstractCallOperation {
 
@@ -43,8 +45,8 @@ public class ExtCallOperation extends AbstractCallOperation {
   }
 
   @Override
-  protected Address to(final MessageFrame frame) {
-    return Words.toAddress(frame.getStackItem(0));
+  protected Optional<Address> to(final MessageFrame frame) {
+    return Words.maybeAddress(frame.getCode().getEofVersion(), frame.getStackItem(0));
   }
 
   @Override
@@ -78,7 +80,7 @@ public class ExtCallOperation extends AbstractCallOperation {
   }
 
   @Override
-  protected Address address(final MessageFrame frame) {
+  protected Optional<Address> address(final MessageFrame frame) {
     return to(frame);
   }
 
@@ -96,7 +98,7 @@ public class ExtCallOperation extends AbstractCallOperation {
   public long cost(final MessageFrame frame, final boolean accountIsWarm) {
     final long inputDataOffset = inputDataOffset(frame);
     final long inputDataLength = inputDataLength(frame);
-    final Account recipient = frame.getWorldUpdater().get(address(frame));
+    final Account recipient = address(frame).map(a -> frame.getWorldUpdater().get(a)).orElse(null);
 
     return gasCalculator()
         .callOperationGasCost(
@@ -108,15 +110,15 @@ public class ExtCallOperation extends AbstractCallOperation {
             0,
             value(frame),
             recipient,
-            to(frame),
             accountIsWarm);
   }
 
   @Override
   public OperationResult execute(final MessageFrame frame, final EVM evm) {
     if (frame.isStatic() && !value(frame).isZero()) {
-      Address to = to(frame);
-      final boolean accountIsWarm = frame.warmUpAddress(to) || gasCalculator().isPrecompile(to);
+      Optional<Address> to = to(frame);
+      final boolean accountIsWarm =
+          to.map(a -> frame.warmUpAddress(a) || gasCalculator().isPrecompile(a)).orElse(false);
       return new OperationResult(
           cost(frame, accountIsWarm), ExceptionalHaltReason.ILLEGAL_STATE_CHANGE);
     } else {

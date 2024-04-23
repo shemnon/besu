@@ -24,6 +24,8 @@ import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.internal.Words;
 
+import java.util.Optional;
+
 /** The Call operation. */
 public class CallOperation extends AbstractCallOperation {
 
@@ -37,8 +39,8 @@ public class CallOperation extends AbstractCallOperation {
   }
 
   @Override
-  protected Address to(final MessageFrame frame) {
-    return Words.toAddress(frame.getStackItem(1));
+  protected Optional<Address> to(final MessageFrame frame) {
+    return Words.maybeAddress(frame.getCode().getEofVersion(), frame.getStackItem(1));
   }
 
   @Override
@@ -72,7 +74,7 @@ public class CallOperation extends AbstractCallOperation {
   }
 
   @Override
-  protected Address address(final MessageFrame frame) {
+  protected Optional<Address> address(final MessageFrame frame) {
     return to(frame);
   }
 

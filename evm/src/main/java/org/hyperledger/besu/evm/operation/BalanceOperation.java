@@ -24,6 +24,8 @@ import org.hyperledger.besu.evm.internal.OverflowException;
 import org.hyperledger.besu.evm.internal.UnderflowException;
 import org.hyperledger.besu.evm.internal.Words;
 
+import java.util.Optional;
+
 import org.apache.tuweni.bytes.Bytes;
 
 /** The Balance operation. */
@@ -54,7 +56,12 @@ public class BalanceOperation extends AbstractOperation {
   @Override
   public OperationResult execute(final MessageFrame frame, final EVM evm) {
     try {
-      final Address address = Words.toAddress(frame.popStackItem());
+      final Optional<Address> maybeAddress =
+          Words.maybeAddress(frame.getCode().getEofVersion(), frame.popStackItem());
+      if (maybeAddress.isEmpty()) {
+        return new OperationResult(cost(true), ExceptionalHaltReason.UNSUPPORTED_ADDRESS);
+      }
+      Address address = maybeAddress.get();
       final boolean accountIsWarm =
           frame.warmUpAddress(address) || gasCalculator().isPrecompile(address);
       final long cost = cost(accountIsWarm);

@@ -81,6 +81,9 @@ public interface ExceptionalHaltReason {
   /** The constant NONEXISTENT_CONTAINER */
   ExceptionalHaltReason NONEXISTENT_CONTAINER = DefaultExceptionalHaltReason.NONEXISTENT_CONTAINER;
 
+  /** EIP-7676 - Prepare for ASE violation */
+  ExceptionalHaltReason UNSUPPORTED_ADDRESS = DefaultExceptionalHaltReason.UNSUPPORTED_ADDRESS;
+
   /**
    * Name string.
    *
@@ -140,7 +143,10 @@ public interface ExceptionalHaltReason {
     EOF_DELEGATE_CALL_VERSION_INCOMPATIBLE(
         "EOF Code is attempting to delegate call code of an earlier version"),
     /** Container referenced by EOFCREATE operation does not exist */
-    NONEXISTENT_CONTAINER("Referenced subcontainer index does not exist (too large?)");
+    NONEXISTENT_CONTAINER("Referenced subcontainer index does not exist (too large?)"),
+    /** EIP-7676 - Prepare for ASE violation */
+    UNSUPPORTED_ADDRESS(
+        "Address has data in high 12 bytes, which is reserved for Address Space Estenstion");
 
     /** The Description. */
     final String description;

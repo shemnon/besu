@@ -23,6 +23,8 @@ import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.internal.Words;
 
+import java.util.Optional;
+
 /** The Delegate call operation. */
 public class ExtDelegateCallOperation extends AbstractCallOperation {
 
@@ -41,8 +43,8 @@ public class ExtDelegateCallOperation extends AbstractCallOperation {
   }
 
   @Override
-  protected Address to(final MessageFrame frame) {
-    return Words.toAddress(frame.getStackItem(0));
+  protected Optional<Address> to(final MessageFrame frame) {
+    return Words.maybeAddress(frame.getCode().getEofVersion(), frame.getStackItem(0));
   }
 
   @Override
@@ -76,8 +78,8 @@ public class ExtDelegateCallOperation extends AbstractCallOperation {
   }
 
   @Override
-  protected Address address(final MessageFrame frame) {
-    return frame.getRecipientAddress();
+  protected Optional<Address> address(final MessageFrame frame) {
+    return Optional.of(frame.getRecipientAddress());
   }
 
   @Override
@@ -104,7 +106,7 @@ public class ExtDelegateCallOperation extends AbstractCallOperation {
   public long cost(final MessageFrame frame, final boolean accountIsWarm) {
     final long inputDataOffset = inputDataOffset(frame);
     final long inputDataLength = inputDataLength(frame);
-    final Account recipient = frame.getWorldUpdater().get(address(frame));
+    final Account recipient = address(frame).map(a -> frame.getWorldUpdater().get(a)).orElse(null);
 
     return gasCalculator()
         .callOperationGasCost(
@@ -116,7 +118,6 @@ public class ExtDelegateCallOperation extends AbstractCallOperation {
             0,
             Wei.ZERO,
             recipient,
-            to(frame),
             accountIsWarm);
   }
 }

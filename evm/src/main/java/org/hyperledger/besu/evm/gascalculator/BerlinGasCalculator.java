@@ -165,7 +165,6 @@ public class BerlinGasCalculator extends IstanbulGasCalculator {
         outputDataLength,
         transferValue,
         recipient,
-        to,
         frame.warmUpAddress(to) || isPrecompile(to));
   }
 
@@ -180,7 +179,6 @@ public class BerlinGasCalculator extends IstanbulGasCalculator {
       final long outputDataLength,
       final Wei transferValue,
       final Account recipient,
-      final Address to,
       final boolean accountIsWarm) {
     final long baseCost =
         super.callOperationGasCost(
@@ -192,7 +190,6 @@ public class BerlinGasCalculator extends IstanbulGasCalculator {
             outputDataLength,
             transferValue,
             recipient,
-            to,
             true); // we want the "warmed price" as we will charge for warming ourselves
     return clampedAdd(
         baseCost, accountIsWarm ? getWarmStorageReadCost() : getColdAccountAccessCost());
