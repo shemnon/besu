@@ -22,12 +22,14 @@ import static org.hyperledger.besu.evmtool.EOFTestSubCommand.COMMAND_NAME;
 import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.ethereum.referencetests.EOFTestCaseSpec;
 import org.hyperledger.besu.ethereum.referencetests.EOFTestCaseSpec.TestResult;
+import org.hyperledger.besu.ethereum.referencetests.EOFTestCaseSpec.TestVector;
 import org.hyperledger.besu.evm.EvmSpecVersion;
 import org.hyperledger.besu.evm.code.CodeFactory;
 import org.hyperledger.besu.evm.code.CodeInvalid;
 import org.hyperledger.besu.evm.code.CodeV1;
 import org.hyperledger.besu.evm.code.CodeV1Validation;
 import org.hyperledger.besu.evm.code.EOFLayout;
+import org.hyperledger.besu.evm.code.EOFLayout.EOFContainerMode;
 import org.hyperledger.besu.util.LogConfigurator;
 
 import java.io.BufferedReader;
@@ -140,16 +142,15 @@ public class EOFTestSubCommand implements Runnable {
       String groupName = testGroup.getKey();
       for (var testVector : testGroup.getValue().getVector().entrySet()) {
         String testName = testVector.getKey();
+        TestVector testValue = testVector.getValue();
         if (testVectorName != null && !testVectorName.equals(testName)) {
           continue;
         }
-        String code = testVector.getValue().code();
-        for (var testResult : testVector.getValue().results().entrySet()) {
+        for (var testResult : testValue.results().entrySet()) {
           String expectedForkName = testResult.getKey();
           if (forkName != null && !forkName.equals(expectedForkName)) {
             continue;
           }
-          TestResult expectedResult = testResult.getValue();
           EvmSpecVersion evmVersion = EvmSpecVersion.fromName(expectedForkName);
           if (evmVersion == null) {
             results.add(
@@ -168,8 +169,9 @@ public class EOFTestSubCommand implements Runnable {
           if (evmVersion.ordinal() < EvmSpecVersion.PRAGUE_EOF.ordinal()) {
             actualResult = failed("EOF_InvalidCode");
           } else {
-            actualResult = considerCode(code);
+            actualResult = considerCode(testValue.code(), testValue.kind());
           }
+          var expectedResult = testResult.getValue();
           results.add(
               new TestExecutionResult(
                   fileName,
@@ -192,7 +194,7 @@ public class EOFTestSubCommand implements Runnable {
     }
   }
 
-  public TestResult considerCode(final String hexCode) {
+  public TestResult considerCode(final String hexCode, final String kind) {
     Bytes codeBytes;
     try {
       codeBytes =
@@ -208,6 +210,19 @@ public class EOFTestSubCommand implements Runnable {
     var layout = EOFLayout.parseEOF(codeBytes);
     if (!layout.isValid()) {
       return failed("layout - " + layout.invalidReason());
+    }
+    if (kind != null) {
+      if ("initcode".equals(kind)) {
+        if (layout.containerMode().get() == EOFContainerMode.RUNTIME) {
+          return failed("initcode container had runtime operations");
+        }
+      } else if ("runtime".equals(kind)) {
+        if (layout.containerMode().get() == EOFContainerMode.INITCODE) {
+          return failed("initcode container had runtime operations");
+        }
+      } else {
+        return failed("Unknown container kind '" + kind + "'");
+      }
     }
 
     var code = CodeFactory.createCode(codeBytes, 1);

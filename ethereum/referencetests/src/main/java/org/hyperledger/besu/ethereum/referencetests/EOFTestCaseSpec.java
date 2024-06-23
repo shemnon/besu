@@ -18,6 +18,8 @@ import java.util.NavigableMap;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -25,7 +27,8 @@ public class EOFTestCaseSpec {
 
   public record TestVector(
       @JsonProperty("code") String code,
-      @JsonProperty("results") NavigableMap<String, TestResult> results) {}
+      @JsonProperty("results") NavigableMap<String, TestResult> results,
+      @JsonInclude(Include.NON_NULL) @JsonProperty("kind") String kind) {}
 
   public record TestResult(
       @JsonProperty("exception") String exception, @JsonProperty("result") boolean result) {

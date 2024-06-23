@@ -57,7 +57,7 @@ public record EOFLayout(
     String invalidReason,
     AtomicReference<EOFContainerMode> containerMode) {
 
-  enum EOFContainerMode {
+  public enum EOFContainerMode {
     UNKNOWN,
     INITCODE,
     RUNTIME

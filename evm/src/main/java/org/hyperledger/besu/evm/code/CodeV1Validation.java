@@ -45,7 +45,6 @@ import org.hyperledger.besu.evm.operation.SwapNOperation;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.List;
 import java.util.Queue;
 import javax.annotation.Nullable;
 
@@ -60,24 +59,38 @@ public final class CodeV1Validation {
     // to prevent instantiation
   }
 
+  record WorklistEntry(EOFLayout layout, String subcontainer) {
+    public WorklistEntry(final WorklistEntry parent, final int child) {
+      this(
+          parent.layout.subContainers()[child],
+          parent.subcontainer == null
+              ? Integer.toString(child)
+              : parent.subcontainer + "." + child);
+    }
+  }
+
   /**
    * Validates the code and stack for the EOF Layout, with optional deep consideration of the
    * containers.
    *
-   * @param layout The parsed EOFLayout of the code
+   * @param layout The parsed EOFLayout of the code that will be examined by stack and bytecode
+   *     validation.
    * @return either null, indicating no error, or a String describing the validation error.
    */
   @SuppressWarnings(
       "ReferenceEquality") // comparison `container != layout` is deliberate and correct
   public static String validate(final EOFLayout layout) {
-    Queue<EOFLayout> workList = new ArrayDeque<>(layout.getSubcontainerCount());
-    workList.add(layout);
+    Queue<WorklistEntry> workList = new ArrayDeque<>(layout.getSubcontainerCount());
+    workList.add(new WorklistEntry(layout, null));
 
     while (!workList.isEmpty()) {
-      EOFLayout container = workList.poll();
-      workList.addAll(List.of(container.subContainers()));
+      WorklistEntry entry = workList.poll();
+      EOFLayout container = entry.layout;
       if (container != layout && container.containerMode().get() == null) {
-        return "Unreferenced container #" + layout.indexOfSubcontainer(container);
+        return "Unreferenced container #" + entry.subcontainer;
+      }
+      for (int i = 0; i < container.getSubcontainerCount(); i++) {
+        workList.add(new WorklistEntry(entry, i));
       }
       if (container.containerMode().get() != RUNTIME
           && container.data().size() != container.dataLength()) {

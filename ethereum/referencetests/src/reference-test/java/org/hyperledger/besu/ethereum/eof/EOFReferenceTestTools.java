@@ -15,6 +15,7 @@
 package org.hyperledger.besu.ethereum.eof;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -30,6 +31,7 @@ import org.hyperledger.besu.evm.code.CodeInvalid;
 import org.hyperledger.besu.evm.code.CodeV1;
 import org.hyperledger.besu.evm.code.CodeV1Validation;
 import org.hyperledger.besu.evm.code.EOFLayout;
+import org.hyperledger.besu.evm.code.EOFLayout.EOFContainerMode;
 import org.hyperledger.besu.testutil.JsonTestParameters;
 
 public class EOFReferenceTestTools {
@@ -51,6 +53,7 @@ public class EOFReferenceTestTools {
                     eofSpec.getVector().entrySet()) {
                   final String name = entry.getKey();
                   final Bytes code = Bytes.fromHexString(entry.getValue().code());
+                  final String kind = entry.getValue().kind();
                   for (final var result : entry.getValue().results().entrySet()) {
                     final String eip = result.getKey();
                     final boolean runTest = EIPS_TO_RUN.contains(eip);
@@ -60,6 +63,7 @@ public class EOFReferenceTestTools {
                         eip,
                         code,
                         result.getValue(),
+                        kind,
                         runTest);
                   }
                 }
@@ -74,7 +78,7 @@ public class EOFReferenceTestTools {
     params.ignore("EOF1_undefined_opcodes_186");
 
     // embedded containers rules changed
-    params.ignore("EOF1_embedded_container");
+    params.ignore("efValidation/EOF1_embedded_container-Prague\\[EOF1_embedded_container_\\d+\\]");
 
     // truncated data is only allowed in embedded containers
     params.ignore("ori/validInvalid-Prague\\[validInvalid_48\\]");
@@ -101,8 +105,9 @@ public class EOFReferenceTestTools {
     return params.generate(filePath);
   }
 
+  @SuppressWarnings("java:S5960") // This is not production code, this is testing code.
   public static void executeTest(
-      final String fork, final Bytes code, final EOFTestCaseSpec.TestResult expected) {
+      final String fork, final Bytes code, final EOFTestCaseSpec.TestResult expected, String kind) {
     EvmSpecVersion evmVersion = EvmSpecVersion.fromName(fork);
     assertThat(evmVersion).isNotNull();
 
@@ -111,6 +116,18 @@ public class EOFReferenceTestTools {
       assertThat(expected.exception()).isEqualTo("EOF_InvalidCode");
     } else {
       EOFLayout layout = EOFLayout.parseEOF(code);
+      if (kind != null) {
+        switch (kind) {
+          case "initcode":
+            assertThat(layout.containerMode().get()).isNotEqualTo(EOFContainerMode.RUNTIME);
+            break;
+          case "runtime":
+            assertThat(layout.containerMode().get()).isNotEqualTo(EOFContainerMode.INITCODE);
+            break;
+          default:
+            fail("Unrecognized EOF kind: " + kind);
+        }
+      }
 
       if (layout.isValid()) {
         Code parsedCode = CodeFactory.createCode(code, evmVersion.getMaxEofVersion());
