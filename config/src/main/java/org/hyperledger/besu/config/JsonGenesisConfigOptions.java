@@ -404,6 +404,11 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
   }
 
   @Override
+  public OptionalInt getInitcodeSizeLimit() {
+    return getOptionalInt("initcodesizelimit");
+  }
+
+  @Override
   public OptionalInt getEvmStackSize() {
     return getOptionalInt("evmstacksize");
   }
@@ -483,6 +488,7 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
     getSpiralBlockNumber().ifPresent(l -> builder.put("spiralBlock", l));
 
     getContractSizeLimit().ifPresent(l -> builder.put("contractSizeLimit", l));
+    getInitcodeSizeLimit().ifPresent(l -> builder.put("initcodeSizeLimit", l));
     getEvmStackSize().ifPresent(l -> builder.put("evmstacksize", l));
     getEcip1017EraRounds().ifPresent(l -> builder.put("ecip1017EraRounds", l));
 

@@ -457,6 +457,13 @@ public interface GenesisConfigOptions {
   OptionalInt getContractSizeLimit();
 
   /**
+   * Gets initcode size limit.
+   *
+   * @return the initcode size limit
+   */
+  OptionalInt getInitcodeSizeLimit();
+
+  /**
    * Gets evm stack size.
    *
    * @return the evm stack size

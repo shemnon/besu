@@ -71,6 +71,7 @@ public class StubGenesisConfigOptions implements GenesisConfigOptions, Cloneable
   private OptionalLong spiralBlockNumber = OptionalLong.empty();
   private Optional<BigInteger> chainId = Optional.empty();
   private OptionalInt contractSizeLimit = OptionalInt.empty();
+  private OptionalInt initcodeSizeLimit = OptionalInt.empty();
   private OptionalInt stackSizeLimit = OptionalInt.empty();
   private final OptionalLong ecip1017EraRounds = OptionalLong.empty();
   private Optional<String> ecCurve = Optional.empty();
@@ -344,6 +345,11 @@ public class StubGenesisConfigOptions implements GenesisConfigOptions, Cloneable
   }
 
   @Override
+  public OptionalInt getInitcodeSizeLimit() {
+    return initcodeSizeLimit;
+  }
+
+  @Override
   public OptionalInt getEvmStackSize() {
     return stackSizeLimit;
   }
@@ -400,6 +406,7 @@ public class StubGenesisConfigOptions implements GenesisConfigOptions, Cloneable
     getSpiralBlockNumber().ifPresent(l -> builder.put("spiralBlock", l));
 
     getContractSizeLimit().ifPresent(l -> builder.put("contractSizeLimit", l));
+    getInitcodeSizeLimit().ifPresent(l -> builder.put("initcodeSizeLimit", l));
     getEvmStackSize().ifPresent(l -> builder.put("evmStackSize", l));
     getDepositContractAddress().ifPresent(l -> builder.put("depositContractAddress", l));
     if (isClique()) {
@@ -893,6 +900,17 @@ public class StubGenesisConfigOptions implements GenesisConfigOptions, Cloneable
    */
   public StubGenesisConfigOptions contractSizeLimit(final int contractSizeLimit) {
     this.contractSizeLimit = OptionalInt.of(contractSizeLimit);
+    return this;
+  }
+
+  /**
+   * Initcode size limit stub genesis config options.
+   *
+   * @param initcodeSizeLimit the initcode size limit
+   * @return the stub genesis config options
+   */
+  public StubGenesisConfigOptions initcodeSizeLimit(final int initcodeSizeLimit) {
+    this.initcodeSizeLimit = OptionalInt.of(initcodeSizeLimit);
     return this;
   }
 

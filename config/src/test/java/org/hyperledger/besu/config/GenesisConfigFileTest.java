@@ -353,12 +353,14 @@ class GenesisConfigFileTest {
     override.put("istanbulBlock", bigBlockString);
     override.put("chainId", bigBlockString);
     override.put("contractSizeLimit", bigBlockString);
+    override.put("initcodeSizeLimit", bigBlockString);
 
     assertThat(config.getForkBlockNumbers()).isNotEmpty();
     assertThat(config.getConfigOptions(override).getIstanbulBlockNumber()).hasValue(bigBlock);
     assertThat(config.getConfigOptions(override).getChainId())
         .hasValue(BigInteger.valueOf(bigBlock));
     assertThat(config.getConfigOptions(override).getContractSizeLimit()).hasValue(bigBlock);
+    assertThat(config.getConfigOptions(override).getInitcodeSizeLimit()).hasValue(bigBlock);
   }
 
   @Test
@@ -368,11 +370,13 @@ class GenesisConfigFileTest {
     override.put("istanbulBlock", null);
     override.put("chainId", null);
     override.put("contractSizeLimit", null);
+    override.put("initcodeSizeLimit", null);
 
     assertThat(config.getForkBlockNumbers()).isNotEmpty();
     assertThat(config.getConfigOptions(override).getIstanbulBlockNumber()).isNotPresent();
     assertThat(config.getConfigOptions(override).getChainId()).isNotPresent();
     assertThat(config.getConfigOptions(override).getContractSizeLimit()).isNotPresent();
+    assertThat(config.getConfigOptions(override).getInitcodeSizeLimit()).isNotPresent();
   }
 
   @Test
@@ -401,10 +405,12 @@ class GenesisConfigFileTest {
     override.put("istanbulBlock", "");
     override.put("chainId", "");
     override.put("contractSizeLimit", "");
+    override.put("initcodeSizeLimit", "");
 
     assertThat(config.getConfigOptions(override).getIstanbulBlockNumber()).isNotPresent();
     assertThat(config.getConfigOptions(override).getChainId()).isNotPresent();
     assertThat(config.getConfigOptions(override).getContractSizeLimit()).isNotPresent();
+    assertThat(config.getConfigOptions(override).getInitcodeSizeLimit()).isNotPresent();
   }
 
   @Test
@@ -415,6 +421,7 @@ class GenesisConfigFileTest {
     assertThat(config.getConfigOptions().getIstanbulBlockNumber()).isNotPresent();
     assertThat(config.getConfigOptions().getChainId()).hasValue(BigInteger.valueOf(1337));
     assertThat(config.getConfigOptions().getContractSizeLimit()).hasValue(2147483647);
+    assertThat(config.getConfigOptions().getInitcodeSizeLimit()).hasValue(2147483647);
     assertThat(config.getConfigOptions().getEvmStackSize()).isNotPresent();
     assertThat(config.getConfigOptions().getEcip1017EraRounds()).isNotPresent();
   }

@@ -24,7 +24,6 @@ import org.hyperledger.besu.evm.internal.EvmConfiguration;
 import java.math.BigInteger;
 import java.util.NavigableMap;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.TreeMap;
 import java.util.function.Function;
@@ -120,7 +119,9 @@ public class ProtocolScheduleBuilder {
             isRevertReasonEnabled,
             config.getEcip1017EraRounds(),
             evmConfiguration.overrides(
-                config.getContractSizeLimit(), OptionalInt.empty(), config.getEvmStackSize()),
+                config.getContractSizeLimit(),
+                config.getInitcodeSizeLimit(),
+                config.getEvmStackSize()),
             miningParameters);
 
     validateForkOrdering();
