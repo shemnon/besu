@@ -27,7 +27,7 @@ import org.apache.tuweni.bytes.Bytes32;
 
 /** The Block hash operation. */
 public class BlockHashOperation extends AbstractOperation {
-  private static final int MAX_BLOCK_ARG_SIZE = 8;
+  private static final int MAX_BLOCK_ARG_SIZE = 7;
 
   /**
    * Instantiates a new Block hash operation.
