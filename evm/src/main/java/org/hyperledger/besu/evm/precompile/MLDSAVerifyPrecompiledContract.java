@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Implementation of EIP-8051 VERIFY_MLDSA precompile using ML-DSA-44 (FIPS-204).
  *
- * <p>This implementation uses Java 24's native ML-DSA support. The input format follows the
+ * <p>This implementation uses Java 25's native ML-DSA support. The input format follows the
  * standard FIPS-204 ML-DSA-44 specification rather than the non-standard format suggested in the
  * original EIP. The EIP's recommendation to include the full matrix A_hat and other intermediate
  * values in the public key is unnecessary and inefficient, as it optimizes for EVM bytecode
@@ -154,8 +154,8 @@ public class MLDSAVerifyPrecompiledContract extends AbstractPrecompiledContract 
           input.slice(MLDSA44_PUBLIC_KEY_SIZE, MLDSA44_SIGNATURE_SIZE);
       final Bytes messageBytes = input.slice(MINIMUM_INPUT_SIZE);
 
-      // Use Java 24's ML-DSA-44 implementation
-      // The algorithm name for ML-DSA-44 in Java 24
+      // Use Java 25's ML-DSA-44 implementation
+      // The algorithm name for ML-DSA-44 in Java 25
       final Signature verifier = Signature.getInstance("ML-DSA-44");
 
       // Parse the public key
@@ -177,7 +177,7 @@ public class MLDSAVerifyPrecompiledContract extends AbstractPrecompiledContract 
 
     } catch (NoSuchAlgorithmException e) {
       LOG.error(
-          "ML-DSA-44 algorithm not available. Ensure you are running Java 24 or later: {}",
+          "ML-DSA-44 algorithm not available. Ensure you are running Java 25 or later: {}",
           e.getMessage());
       return new PrecompileInputResultTuple(
           enableResultCaching ? input.copy() : input, PrecompileContractResult.success(INVALID));
@@ -217,7 +217,7 @@ public class MLDSAVerifyPrecompiledContract extends AbstractPrecompiledContract 
     final KeyFactory keyFactory = KeyFactory.getInstance("ML-DSA");
 
     // Try to parse as raw ML-DSA key
-    // Note: The exact format may need adjustment once Java 24 is released
+    // Note: The exact format may need adjustment once Java 25 is released
     // This assumes the KeyFactory can handle raw ML-DSA keys or we may need to
     // construct a proper X.509 SubjectPublicKeyInfo structure
     try {
@@ -227,7 +227,7 @@ public class MLDSAVerifyPrecompiledContract extends AbstractPrecompiledContract 
       return keyFactory.generatePublic(keySpec);
     } catch (InvalidKeySpecException e) {
       // If wrapping doesn't work, the KeyFactory might accept raw keys directly
-      // This is implementation-dependent and may need adjustment for Java 24
+      // This is implementation-dependent and may need adjustment for Java 25
       throw new InvalidKeySpecException("Failed to parse ML-DSA-44 public key", e);
     }
   }
@@ -236,14 +236,14 @@ public class MLDSAVerifyPrecompiledContract extends AbstractPrecompiledContract 
    * Wraps a raw ML-DSA public key in an X.509 SubjectPublicKeyInfo structure.
    *
    * <p>This is a simplified version that creates a minimal X.509 wrapper. The actual OID and
-   * structure should match FIPS-204 specifications and Java 24's implementation.
+   * structure should match FIPS-204 specifications and Java 25's implementation.
    *
    * @param rawKey the raw public key bytes
    * @return the X.509 encoded public key
    */
   private byte[] wrapRawKeyInX509(final byte[] rawKey) {
     // This is a placeholder implementation. The actual X.509 wrapping
-    // will depend on Java 24's specific ML-DSA implementation and the
+    // will depend on Java 25's specific ML-DSA implementation and the
     // OID assigned to ML-DSA-44 in FIPS-204.
     //
     // The structure should be:
@@ -254,8 +254,8 @@ public class MLDSAVerifyPrecompiledContract extends AbstractPrecompiledContract 
     //   BIT STRING (the raw key)
     // }
     //
-    // For now, we'll return the raw key and rely on Java 24's KeyFactory
-    // to handle it appropriately. This may need to be updated once Java 24
+    // For now, we'll return the raw key and rely on Java 25's KeyFactory
+    // to handle it appropriately. This may need to be updated once Java 25
     // documentation is available.
     return rawKey;
   }

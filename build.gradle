@@ -51,8 +51,8 @@ sonarqube {
 
 project.tasks["sonar"].dependsOn "testCodeCoverageReport"
 
-if (!JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_24)) {
-  throw new GradleException("Java 24 or later is required to build Besu.\n" +
+if (!JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_25)) {
+  throw new GradleException("Java 25 or later is required to build Besu.\n" +
   "  Detected version ${JavaVersion.current()}")
 }
 
@@ -159,8 +159,8 @@ configure(allprojects - project(':platform')) {
   }
 
   java {
-    sourceCompatibility = 24
-    targetCompatibility = 24
+    sourceCompatibility = 25
+    targetCompatibility = 25
 
     consistentResolution {
       useCompileClasspathVersions()

@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Test suite for ML-DSA-44 signature verification precompile (EIP-8051).
  *
- * <p>This test class validates the ML-DSA-44 precompile implementation using Java 24's native
+ * <p>This test class validates the ML-DSA-44 precompile implementation using Java 25's native
  * ML-DSA support. Test vectors are derived from FIPS-204 test data.
  */
 class MLDSAVerifyPrecompiledContractTest {
@@ -49,11 +49,11 @@ class MLDSAVerifyPrecompiledContractTest {
 
   @BeforeAll
   static void setup() {
-    // Verify Java 24 is available
+    // Verify Java 25 is available
     String javaVersion = System.getProperty("java.version");
-    if (!javaVersion.startsWith("24")) {
+    if (!javaVersion.startsWith("25")) {
       System.err.println(
-          "Warning: ML-DSA tests require Java 24 or later. Current version: " + javaVersion);
+          "Warning: ML-DSA tests require Java 25 or later. Current version: " + javaVersion);
     }
   }
 
@@ -150,22 +150,22 @@ class MLDSAVerifyPrecompiledContractTest {
    * This test will validate a properly signed message using ML-DSA-44 once test vectors are
    * available.
    *
-   * <p>TODO: Add FIPS-204 test vectors for ML-DSA-44 when Java 24 is released. Test vectors should
+   * <p>TODO: Add FIPS-204 test vectors for ML-DSA-44 when Java 25 is released. Test vectors should
    * be obtained from: - NIST FIPS-204 test data - ACVP (Automated Cryptographic Validation
    * Protocol) test vectors
    */
   @Test
   void testValidSignature() {
     // This test is a placeholder for when proper ML-DSA-44 test vectors are available.
-    // Once Java 24 is released with ML-DSA support, we should:
+    // Once Java 25 is released with ML-DSA support, we should:
     // 1. Generate a valid ML-DSA-44 key pair
     // 2. Sign a test message
     // 3. Verify that the precompile returns VALID (0x000...001)
 
     // For now, we'll skip this test with a note
     System.out.println(
-        "NOTE: Valid signature test requires Java 24 ML-DSA-44 test vectors. "
-            + "Test should be implemented when Java 24 is released.");
+        "NOTE: Valid signature test requires Java 25 ML-DSA-44 test vectors. "
+            + "Test should be implemented when Java 25 is released.");
 
     // Example structure for the test once vectors are available:
     // Bytes publicKey = Bytes.fromHexString("...");  // 1312 bytes
