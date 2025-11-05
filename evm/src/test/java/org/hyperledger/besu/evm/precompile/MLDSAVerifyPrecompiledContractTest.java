@@ -147,37 +147,136 @@ class MLDSAVerifyPrecompiledContractTest {
   }
 
   /**
-   * This test will validate a properly signed message using ML-DSA-44 once test vectors are
-   * available.
+   * Test with a real valid ML-DSA-44 signature.
    *
-   * <p>TODO: Add FIPS-204 test vectors for ML-DSA-44 when Java 25 is released. Test vectors should
-   * be obtained from: - NIST FIPS-204 test data - ACVP (Automated Cryptographic Validation
-   * Protocol) test vectors
+   * <p>This test uses Java's native ML-DSA-44 implementation (JEP-497) to generate a valid key
+   * pair, sign a message, and verify that the precompile correctly validates it.
    */
   @Test
-  void testValidSignature() {
-    // This test is a placeholder for when proper ML-DSA-44 test vectors are available.
-    // Once Java 25 is released with ML-DSA support, we should:
-    // 1. Generate a valid ML-DSA-44 key pair
-    // 2. Sign a test message
-    // 3. Verify that the precompile returns VALID (0x000...001)
+  void testValidSignature() throws Exception {
+    // Generate a valid test vector
+    byte[] message = "Hello, Ethereum!".getBytes();
+    MLDSATestVectorGenerator.TestVector testVector =
+        MLDSATestVectorGenerator.generateTestVector(message);
 
-    // For now, we'll skip this test with a note
-    System.out.println(
-        "NOTE: Valid signature test requires Java 25 ML-DSA-44 test vectors. "
-            + "Test should be implemented when Java 25 is released.");
+    Bytes input = testVector.getPrecompileInput();
+    PrecompiledContract.PrecompileContractResult result =
+        contract.computePrecompile(input, messageFrame);
 
-    // Example structure for the test once vectors are available:
-    // Bytes publicKey = Bytes.fromHexString("...");  // 1312 bytes
-    // Bytes signature = Bytes.fromHexString("...");   // 2420 bytes
-    // Bytes message = Bytes.fromHexString("...");     // variable length
-    //
-    // Bytes input = Bytes.concatenate(publicKey, signature, message);
-    // PrecompiledContract.PrecompileContractResult result =
-    //     contract.computePrecompile(input, messageFrame);
-    //
-    // assertTrue(result.isSuccessful());
-    // assertEquals(VALID_RESULT, result.output(), "Valid signature should return 0x000...001");
+    assertTrue(result.isSuccessful(), "Precompile should succeed");
+    assertEquals(
+        VALID_RESULT, result.output(), "Valid signature should return 0x000...001 (32 bytes)");
+  }
+
+  /**
+   * Test with multiple valid signatures to ensure consistency.
+   */
+  @Test
+  void testMultipleValidSignatures() throws Exception {
+    // Test with different messages
+    String[] messages = {"", "test", "Hello, World!", "Ethereum EIP-8051", "A".repeat(1000)};
+
+    for (String msg : messages) {
+      MLDSATestVectorGenerator.TestVector testVector =
+          MLDSATestVectorGenerator.generateTestVector(msg.getBytes());
+
+      Bytes input = testVector.getPrecompileInput();
+      PrecompiledContract.PrecompileContractResult result =
+          contract.computePrecompile(input, messageFrame);
+
+      assertTrue(result.isSuccessful(), "Precompile should succeed for message: " + msg);
+      assertEquals(
+          VALID_RESULT,
+          result.output(),
+          "Valid signature should return 0x000...001 for message: " + msg);
+    }
+  }
+
+  /**
+   * Test with a corrupted signature.
+   */
+  @Test
+  void testCorruptedSignature() throws Exception {
+    byte[] message = "Test message".getBytes();
+    MLDSATestVectorGenerator.TestVector testVector =
+        MLDSATestVectorGenerator.generateInvalidSignatureTestVector(message);
+
+    Bytes input = testVector.getPrecompileInput();
+    PrecompiledContract.PrecompileContractResult result =
+        contract.computePrecompile(input, messageFrame);
+
+    assertTrue(result.isSuccessful(), "Precompile should succeed");
+    assertEquals(
+        INVALID_RESULT,
+        result.output(),
+        "Corrupted signature should return 0x000...000 (32 bytes)");
+  }
+
+  /**
+   * Test with wrong message (signature is valid but for a different message).
+   */
+  @Test
+  void testWrongMessage() throws Exception {
+    byte[] originalMessage = "Original message".getBytes();
+    byte[] wrongMessage = "Different message".getBytes();
+
+    MLDSATestVectorGenerator.TestVector testVector =
+        MLDSATestVectorGenerator.generateWrongMessageTestVector(originalMessage, wrongMessage);
+
+    Bytes input = testVector.getPrecompileInput();
+    PrecompiledContract.PrecompileContractResult result =
+        contract.computePrecompile(input, messageFrame);
+
+    assertTrue(result.isSuccessful(), "Precompile should succeed");
+    assertEquals(
+        INVALID_RESULT,
+        result.output(),
+        "Signature with wrong message should return 0x000...000 (32 bytes)");
+  }
+
+  /**
+   * Test with valid signature and empty message.
+   */
+  @Test
+  void testValidSignatureEmptyMessage() throws Exception {
+    MLDSATestVectorGenerator.TestVector testVector =
+        MLDSATestVectorGenerator.generateTestVector(new byte[0]);
+
+    Bytes input = testVector.getPrecompileInput();
+    PrecompiledContract.PrecompileContractResult result =
+        contract.computePrecompile(input, messageFrame);
+
+    assertTrue(result.isSuccessful(), "Precompile should succeed");
+    assertEquals(
+        VALID_RESULT, result.output(), "Valid signature with empty message should verify");
+  }
+
+  /**
+   * Test that verifies public key size matches ML-DSA-44 specification.
+   */
+  @Test
+  void testPublicKeySize() throws Exception {
+    MLDSATestVectorGenerator.TestVector testVector =
+        MLDSATestVectorGenerator.generateTestVector("test".getBytes());
+
+    assertEquals(
+        1312,
+        testVector.getPublicKey().length,
+        "ML-DSA-44 public key should be 1312 bytes (FIPS-204)");
+  }
+
+  /**
+   * Test that verifies signature size matches ML-DSA-44 specification.
+   */
+  @Test
+  void testSignatureSize() throws Exception {
+    MLDSATestVectorGenerator.TestVector testVector =
+        MLDSATestVectorGenerator.generateTestVector("test".getBytes());
+
+    assertEquals(
+        2420,
+        testVector.getSignature().length,
+        "ML-DSA-44 signature should be 2420 bytes (FIPS-204)");
   }
 
   @Test
