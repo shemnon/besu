@@ -14,6 +14,7 @@
  */
 package org.hyperledger.besu.evm.precompile;
 
+import static org.hyperledger.besu.datatypes.Address.MLDSA_VERIFY;
 import static org.hyperledger.besu.datatypes.Address.P256_VERIFY;
 
 import org.hyperledger.besu.datatypes.Address;
@@ -227,5 +228,8 @@ public interface MainnetPrecompiledContracts {
   static void populateForFutureEIPs(
       final PrecompileContractRegistry registry, final GasCalculator gasCalculator) {
     populateForCancun(registry, gasCalculator);
+
+    // EIP-8051 - ML-DSA-44 signature verification
+    registry.put(MLDSA_VERIFY, new MLDSAVerifyPrecompiledContract(gasCalculator));
   }
 }

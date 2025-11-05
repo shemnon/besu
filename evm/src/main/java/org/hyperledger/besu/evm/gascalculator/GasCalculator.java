@@ -84,6 +84,13 @@ public interface GasCalculator {
   long getP256VerifyPrecompiledContractGasCost();
 
   /**
+   * Returns the gas cost to execute the ML-DSA-44 signature verification precompiled contract.
+   *
+   * @return the gas cost to execute the MLDSA_VERIFY precompiled contract
+   */
+  long getMLDSAVerifyPrecompiledContractGasCost();
+
+  /**
    * Returns the gas cost to execute the {@link SHA256PrecompiledContract}.
    *
    * @param input The input to the SHA256 precompiled contract

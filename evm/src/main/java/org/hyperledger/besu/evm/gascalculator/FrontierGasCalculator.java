@@ -53,6 +53,8 @@ public class FrontierGasCalculator implements GasCalculator {
 
   private static final long P256VERIFY_PRECOMPILED_GAS_COST = 6_900L;
 
+  private static final long MLDSA_VERIFY_PRECOMPILED_GAS_COST = 4_500L;
+
   private static final long SHA256_PRECOMPILED_BASE_GAS_COST = 60L;
 
   private static final long SHA256_PRECOMPILED_WORD_GAS_COST = 12L;
@@ -223,6 +225,11 @@ public class FrontierGasCalculator implements GasCalculator {
   @Override
   public long getP256VerifyPrecompiledContractGasCost() {
     return P256VERIFY_PRECOMPILED_GAS_COST;
+  }
+
+  @Override
+  public long getMLDSAVerifyPrecompiledContractGasCost() {
+    return MLDSA_VERIFY_PRECOMPILED_GAS_COST;
   }
 
   @Override

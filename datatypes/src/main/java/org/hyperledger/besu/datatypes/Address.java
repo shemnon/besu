@@ -90,6 +90,9 @@ public class Address extends DelegatingBytes {
   /** The constant BLS12_MAP_FP2_TO_G2. */
   public static final Address BLS12_MAP_FP2_TO_G2 = Address.precompiled(0x11);
 
+  /** Precompile address for MLDSA_VERIFY (ML-DSA-44 signature verification). */
+  public static final Address MLDSA_VERIFY = Address.precompiled(0x12);
+
   /** Precompile address for P256_VERIFY. */
   public static final Address P256_VERIFY = Address.precompiled(0x0100);
 
